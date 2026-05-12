@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f2f3f5" />
+    <title>UHOCHA Controle</title>
+    <link rel="manifest" href="manifest.webmanifest?v=12" />
+    <link rel="icon" href="assets/uhocha-logo.png" type="image/png" />
+    <link rel="stylesheet" href="https://cdn.hugeicons.com/font/hgi-stroke-rounded.css" />
+    <link rel="stylesheet" href="styles.css?v=12" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#dashboard" aria-label="UHOCHA Controle">
+          <span class="brand-logo" aria-hidden="true">
+            <img src="assets/uhocha-logo.png" alt="" />
+          </span>
+          <span class="brand-copy">
+            <small>Controle de táxis</small>
+          </span>
+        </a>
+        <div class="top-actions">
+          <button class="icon-button" id="backupButton" type="button" title="Exportar cópia">
+            <span data-icon="download"></span>
+          </button>
+          <button class="icon-button" id="themeButton" type="button" title="Alternar tema">
+            <span data-icon="moon"></span>
+          </button>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <nav class="side-nav" aria-label="Secções">
+          <a href="#dashboard" data-route="dashboard"><span data-icon="layout"></span><span>Painel</span></a>
+          <a href="#registar" data-route="registar"><span data-icon="plus"></span><span>Registar</span></a>
+          <a href="#frota" data-route="frota"><span data-icon="car"></span><span>Frota</span></a>
+          <a href="#contrato" data-route="contrato"><span data-icon="file"></span><span>Contrato</span></a>
+          <a href="#relatorios" data-route="relatorios"><span data-icon="chart"></span><span>Relatórios</span></a>
+        </nav>
+
+        <section class="content">
+          <div id="app"></div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Secções principais">
+        <a href="#dashboard" data-route="dashboard"><span data-icon="layout"></span><span>Painel</span></a>
+        <a href="#registar" data-route="registar"><span data-icon="plus"></span><span>Registar</span></a>
+        <a href="#frota" data-route="frota"><span data-icon="car"></span><span>Frota</span></a>
+        <a href="#contrato" data-route="contrato"><span data-icon="file"></span><span>Contrato</span></a>
+        <a href="#relatorios" data-route="relatorios"><span data-icon="chart"></span><span>Relatórios</span></a>
+      </nav>
+    </div>
+
+    <template id="confirmTemplate">
+      <dialog class="modal">
+        <form method="dialog">
+          <h2></h2>
+          <p></p>
+          <div class="dialog-actions">
+            <button class="button ghost" value="cancel" type="submit">Cancelar</button>
+            <button class="button danger" value="confirm" type="submit">Confirmar</button>
+          </div>
+        </form>
+      </dialog>
+    </template>
+
+    <script src="app.js?v=12" defer></script>
+  </body>
+</html>

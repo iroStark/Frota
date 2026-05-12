@@ -1,0 +1,23 @@
+{
+  "name": "uhocha-controle-carros",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js",
+    "db:create": "node backend/create-db.js",
+    "db:migrate": "node backend/migrate.js",
+    "db:setup": "npm run db:create && npm run db:migrate"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "multer": "^2.1.1",
+    "pg": "^8.13.1"
+  }
+}

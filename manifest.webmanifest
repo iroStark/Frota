@@ -1,0 +1,16 @@
+{
+  "name": "UHOCHA Controle de Táxis",
+  "short_name": "UHOCHA",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f2f3f5",
+  "theme_color": "#c9f158",
+  "icons": [
+    {
+      "src": "assets/uhocha-logo.png",
+      "sizes": "1600x1600",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

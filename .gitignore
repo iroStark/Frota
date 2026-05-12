@@ -1,0 +1,14 @@
+node_modules/
+uploads/
+.env
+.env.local
+.DS_Store
+**/.DS_Store
+npm-debug.log*
+
+# Pastas/ficheiros com dados pessoais — devem ser carregados pelo app, não comitados
+Ficheiros/
+Texto do seu parágrafo.png
+
+# Configuração local do Claude Code
+.claude/
