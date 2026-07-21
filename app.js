@@ -2320,11 +2320,12 @@
         const due = new Date(payment.dueAt);
         return due >= start && due < end;
       });
+      const exemptCount = weekPayments.filter(p => p.isExempt).length;
       const received = weekPayments.reduce((sum, payment) => sum + Number(payment.amount || 0) + Number(payment.penaltyPaid || 0), 0);
       const penalties = weekPayments.reduce((sum, payment) => sum + paymentPenalty(payment).amount, 0);
-      const lateCount = weekPayments.filter((payment) => paymentPenalty(payment).delayHours > 0).length;
+      const lateCount = weekPayments.filter((payment) => !payment.isExempt && paymentPenalty(payment).delayHours > 0).length;
       const activeCount = assignedVehiclesAt(start).length;
-      const expected = activeCount * Number(state.settings.weeklyFee || 0);
+      const expected = Math.max(0, (activeCount - exemptCount) * Number(state.settings.weeklyFee || 0));
       const missing = Math.max(0, activeCount - weekPayments.length);
       buckets.push({ start, end, label, payments: weekPayments.length, received, penalties, lateCount, expected, missing });
     }
@@ -2338,9 +2339,9 @@
     for (let i = monthCount - 1; i >= 0; i--) {
       const date = new Date(ref.getFullYear(), ref.getMonth() - i, 1);
       const key = monthValue(date);
-      const payments = state.payments.filter((payment) => monthValue(new Date(payment.paidAt || payment.dueAt || payment.createdAt)) === key);
+      const payments = state.payments.filter((payment) => monthValue(new Date(payment.dueAt || payment.createdAt)) === key);
       const expenses = state.expenses.filter((expense) => monthValue(new Date(expense.date || expense.createdAt)) === key);
-      const events = state.events.filter((event) => monthValue(new Date(event.date || event.createdAt)) === key);
+      const events = state.events.filter((event) => monthValue(new Date(event.startDate || event.date || event.createdAt)) === key);
       const received = payments.reduce((sum, payment) => sum + Number(payment.amount || 0) + Number(payment.penaltyPaid || 0), 0);
       const ownerCosts = expenses.filter((expense) => expense.responsible === "proprietaria").reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
       buckets.push({ key, payments: payments.length, received, ownerCosts, net: received - ownerCosts, events: events.length });
@@ -3521,6 +3522,8 @@
       try {
         if (submitButton) submitButton.disabled = true;
         await handlers[form.dataset.form]?.(data, form);
+        const dialog = form.closest("dialog");
+        if (dialog && dialog.close) dialog.close();
         render();
       } catch (error) {
         console.error(error);
