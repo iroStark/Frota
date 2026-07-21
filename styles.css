@@ -344,9 +344,11 @@ a {
 
 .metric strong {
   align-self: end;
-  font-size: clamp(1.5rem, 8vw, 2.35rem);
-  line-height: 1;
-  overflow-wrap: anywhere;
+  font-size: clamp(1.2rem, 4.2vw, 2.2rem);
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-weight: 800;
 }
 
@@ -355,7 +357,7 @@ a {
   color: var(--muted);
   line-height: 1.35;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 .status-line {
@@ -1105,27 +1107,52 @@ tr:last-child td {
 .kpi-strip {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 8px;
+  gap: 10px;
 }
 
 .kpi {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 58px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-height: 76px;
   padding: 14px 16px;
-  border-radius: 20px;
+  border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow-soft);
+  min-width: 0;
 }
 
-.kpi span {
+.kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.kpi-label {
   color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.kpi strong {
+.kpi-value {
+  font-size: clamp(0.95rem, 3.2vw, 1.25rem);
+  font-weight: 800;
+  white-space: nowrap;
   text-align: right;
+  min-width: 0;
+}
+
+.kpi-sub {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  min-width: 0;
 }
 
 .timeline {
@@ -1362,7 +1389,7 @@ tr:last-child td {
   }
 
   .kpi-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .toast {

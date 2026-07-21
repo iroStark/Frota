@@ -296,7 +296,15 @@
 
   function money(value) {
     const number = Number(value || 0);
-    return `Kz ${new Intl.NumberFormat("pt-AO", { maximumFractionDigits: 0 }).format(number)}`;
+    const formatted = new Intl.NumberFormat("pt-AO", { maximumFractionDigits: 0 }).format(number);
+    return `Kz\u00A0${formatted.replace(/\s+/g, "\u00A0")}`;
+  }
+
+  function itemEffectiveDate(item, preferredField) {
+    if (!item) return new Date();
+    const val = (preferredField && item[preferredField]) || item.paidAt || item.date || item.dueAt || item.createdAt;
+    const parsed = new Date(val);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
   }
 
   function dateLabel(value) {
@@ -388,13 +396,13 @@
     const next = new Date(monday);
     next.setDate(next.getDate() + 7);
     return state.payments.filter((payment) => {
-      const due = new Date(payment.dueAt);
-      return due >= monday && due < next;
+      const date = itemEffectiveDate(payment, "paidAt");
+      return date >= monday && date < next;
     });
   }
 
-  function currentMonthItems(list, field = "date") {
-    return list.filter((item) => monthValue(new Date(item[field] || item.createdAt)) === activeReportMonth);
+  function currentMonthItems(list, field = "paidAt") {
+    return list.filter((item) => monthValue(itemEffectiveDate(item, field)) === activeReportMonth);
   }
 
   function periodRange(kind) {
@@ -418,7 +426,7 @@
     const { start, end } = periodRange(kind);
     if (!start || !end) return list;
     return list.filter((item) => {
-      const date = new Date(item[field] || item.createdAt);
+      const date = itemEffectiveDate(item, field);
       return date >= start && date < end;
     });
   }
@@ -448,7 +456,8 @@
 
   function calcSummary() {
     const weekPayments = currentWeekPayments();
-    const expected = assignedVehicles().length * state.settings.weeklyFee;
+    const assigned = assignedVehicles();
+    const expected = assigned.length * state.settings.weeklyFee;
     const collected = weekPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
     const penalties = weekPayments.reduce((sum, payment) => sum + paymentPenalty(payment).amount, 0);
     const monthPayments = currentMonthItems(state.payments, "paidAt");
@@ -457,12 +466,14 @@
       .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
     const monthCollected = monthPayments.reduce((sum, payment) => sum + Number(payment.amount || 0) + Number(payment.penaltyPaid || 0), 0);
     const net = monthCollected - monthExpensesOwner;
-    const overdue = assignedVehicles().filter((vehicle) => {
-      const hasPayment = weekPayments.some((payment) => payment.vehicleId === vehicle.id);
-      return !hasPayment && new Date() > dueDateTime(new Date());
-    }).length;
+
+    const pendingVehicles = assigned.filter((vehicle) => {
+      return !weekPayments.some((payment) => payment.vehicleId === vehicle.id || payment.driverId === vehicle.driverId);
+    });
+
+    const overdue = pendingVehicles.length;
     const alerts = buildAlerts();
-    return { expected, collected, penalties, monthExpensesOwner, monthCollected, net, overdue, alerts };
+    return { expected, collected, penalties, monthExpensesOwner, monthCollected, net, overdue, alerts, pendingVehicles };
   }
 
   function calcPeriodSummary(kind) {
@@ -479,19 +490,22 @@
   function buildAlerts() {
     const alerts = [];
     const due = dueDateTime(new Date());
-    if (new Date() > due) {
-      assignedVehicles().forEach((vehicle) => {
-        const paid = currentWeekPayments().some((payment) => payment.vehicleId === vehicle.id);
-        if (!paid) {
-          alerts.push({
-            type: "danger",
-            icon: "clock",
-            title: "Entrega semanal pendente",
-            text: `${vehicleName(vehicle)} ainda não tem entrega registada para esta semana.`,
-          });
-        }
-      });
-    }
+    const isPastDue = new Date() > due;
+
+    assignedVehicles().forEach((vehicle) => {
+      const driver = getDriver(vehicle.driverId);
+      const paid = currentWeekPayments().some((payment) => payment.vehicleId === vehicle.id || payment.driverId === vehicle.driverId);
+      if (!paid) {
+        alerts.push({
+          type: isPastDue ? "danger" : "warn",
+          icon: "clock",
+          title: `Entrega pendente: ${driverName(driver)}`,
+          text: `${vehicleName(vehicle)} · Faltam ${money(state.settings.weeklyFee)}${isPastDue ? " (Fora do prazo!)" : ""}`,
+          actionRoute: "registar",
+          driverId: vehicle.driverId,
+        });
+      }
+    });
 
     state.documents.forEach((doc) => {
       const status = documentStatus(doc);
@@ -528,7 +542,7 @@
         });
       });
 
-    return alerts.slice(0, 8);
+    return alerts.slice(0, 10);
   }
 
   function setRoute(input) {
@@ -657,9 +671,11 @@
         <div class="kpi-strip">
           ${periodSummaries.map((item) => `
             <div class="kpi">
-              <span>${h(item.label)}</span>
-              <strong>${money(item.net)}</strong>
-              <small class="muted">${money(item.received)} recebido · ${money(item.ownerCosts)} despesas · ${item.events.length} ocorrências</small>
+              <div class="kpi-top">
+                <span class="kpi-label">${h(item.label)}</span>
+                <strong class="kpi-value">${money(item.net)}</strong>
+              </div>
+              <small class="kpi-sub">${money(item.received)} recebido · ${money(item.ownerCosts)} despesas · ${item.events.length} ocorrências</small>
             </div>
           `).join("")}
         </div>
@@ -668,23 +684,23 @@
       <section class="section-band grid-2">
         <div>
           <div class="section-title">
-            <h2>Alertas</h2>
+            <h2>Alertas & Pendências (${summary.alerts.length})</h2>
             <a class="button secondary" href="#contrato">${icon("file")}Contrato</a>
           </div>
           ${summary.alerts.length ? `
             <div class="record-list">
               ${summary.alerts.map((alert) => `
-                <article class="record">
+                <article class="record ${alert.actionRoute ? "clickable" : ""}" ${alert.actionRoute ? `data-nav="${h(alert.actionRoute)}" ${alert.driverId ? `data-driver-id="${h(alert.driverId)}"` : ""}` : ""}>
                   <div class="record-main">
                     <div class="record-title">
                       <strong>${h(alert.title)}</strong>
                       <small>${h(alert.text)}</small>
                     </div>
-                    <span class="badge ${alert.type}">${icon(alert.icon)}${h(alert.type === "danger" ? "Atenção" : "Prazo")}</span>
+                    <span class="badge ${alert.type}">${icon(alert.icon)}${h(alert.type === "danger" ? "Urgente" : "Pendente")}</span>
                   </div>
                 </article>
               `).join("")}
-            </div>` : empty("Nenhum alerta contratual neste momento.")}
+            </div>` : empty("Nenhum alerta ou pendência contratual neste momento.")}
         </div>
 
         <div>
