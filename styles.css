@@ -96,9 +96,11 @@ a {
 }
 
 .topbar {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 25;
+  left: 0;
+  right: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -106,12 +108,16 @@ a {
   min-height: 64px;
   height: 64px;
   padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
-  background: rgba(255, 255, 255, 0.92);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(20px) saturate(1.5);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  background: #111111;
+  color: #ffffff;
+  border-bottom: none;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
   width: 100%;
+}
+
+[data-theme="dark"] .topbar {
+  background: #1a1a1a;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
 .user-profile {
@@ -165,14 +171,14 @@ a {
 
 .user-details .greeting {
   font-size: 0.72rem;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.7);
   font-weight: 600;
 }
 
 .user-details .user-name {
   font-size: 0.98rem;
   font-weight: 800;
-  color: var(--text);
+  color: #ffffff;
   letter-spacing: -0.01em;
 }
 
@@ -219,9 +225,9 @@ a {
 
 .icon-button {
   width: 48px;
-  background: var(--surface);
-  color: var(--text);
-  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.15);
   box-shadow: var(--shadow-soft);
 }
 
@@ -251,6 +257,7 @@ a {
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
+  padding-top: 64px;
 }
 
 .side-nav {

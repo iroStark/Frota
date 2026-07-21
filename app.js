@@ -855,7 +855,7 @@
           ${summary.alerts.length ? `
             <div class="record-list">
               ${summary.alerts.map((alert) => `
-                <article class="record ${alert.actionRoute ? "clickable" : ""}" ${alert.actionRoute ? `data-nav="${h(alert.actionRoute)}" ${alert.driverId ? `data-driver-id="${h(alert.driverId)}"` : ""}` : ""}>
+                <article class="record ${alert.actionRoute ? "clickable" : ""}" ${alert.actionRoute ? `data-nav="${h(alert.actionRoute)}" ${alert.driverId ? `data-nav-id="${h(alert.driverId)}"` : ""}` : ""}>
                   <div class="record-main">
                     <div class="record-title">
                       <strong>${h(alert.title)}</strong>
@@ -3410,6 +3410,27 @@
     }
   }
 
+  function openAlertsModal() {
+    const summary = calcSummary();
+    const alerts = summary.alerts || [];
+    const html = alerts.length ? `
+      <div class="record-list" style="margin-top: 10px;">
+        ${alerts.map((alert) => `
+          <article class="record ${alert.actionRoute ? "clickable" : ""}" ${alert.actionRoute ? `data-nav="${h(alert.actionRoute)}" ${alert.driverId ? `data-nav-id="${h(alert.driverId)}"` : ""}` : ""}>
+            <div class="record-main">
+              <div class="record-title">
+                <strong>${h(alert.title)}</strong>
+                <small>${h(alert.text)}</small>
+              </div>
+              <span class="badge ${alert.type}">${icon(alert.icon)}${h(alert.type === "danger" ? "Urgente" : alert.type === "info" ? "Info" : "Pendente")}</span>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    ` : empty("Sem alertas ou ocorrências pendentes.");
+    openFormModal("Ocorrências e Alertas", html);
+  }
+
   function confirmAction(title, text) {
     return new Promise((resolve) => {
       const template = document.querySelector("#confirmTemplate");
@@ -3468,6 +3489,13 @@
     });
 
     document.addEventListener("click", async (event) => {
+      const alertBtn = event.target.closest("#alertsButton");
+      if (alertBtn) {
+        event.preventDefault();
+        openAlertsModal();
+        return;
+      }
+
       const comboTrigger = event.target.closest("[data-combo-trigger]");
       if (comboTrigger) {
         const combo = comboTrigger.closest("[data-combo]");
