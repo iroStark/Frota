@@ -1,0 +1,1167 @@
+{
+    "uploads": [
+        {
+            "id": "43a4374b-d606-4057-9c7f-18ff9c423fef",
+            "url": "/uploads/43a4374b-d606-4057-9c7f-18ff9c423fef.pdf",
+            "category": "documento",
+            "mime_type": "application/pdf",
+            "size_bytes": 243795,
+            "stored_name": "43a4374b-d606-4057-9c7f-18ff9c423fef.pdf",
+            "uploaded_at": "2026-05-12T08:25:14.113482+00:00",
+            "original_name": "LDA-06-19-AM.pdf"
+        },
+        {
+            "id": "de631329-aa21-454a-b5f2-c272cbd5bec7",
+            "url": "/uploads/de631329-aa21-454a-b5f2-c272cbd5bec7.pdf",
+            "category": "documento",
+            "mime_type": "application/pdf",
+            "size_bytes": 265107,
+            "stored_name": "de631329-aa21-454a-b5f2-c272cbd5bec7.pdf",
+            "uploaded_at": "2026-05-12T08:25:14.125547+00:00",
+            "original_name": "LDA-10-35-AM.pdf"
+        },
+        {
+            "id": "5e546b1f-0ccf-417e-8ecf-9f8706f1d5be",
+            "url": "/uploads/5e546b1f-0ccf-417e-8ecf-9f8706f1d5be.pdf",
+            "category": "documento",
+            "mime_type": "application/pdf",
+            "size_bytes": 262971,
+            "stored_name": "5e546b1f-0ccf-417e-8ecf-9f8706f1d5be.pdf",
+            "uploaded_at": "2026-05-12T08:25:14.127369+00:00",
+            "original_name": "LDA-93-38-AL.pdf"
+        },
+        {
+            "id": "8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3",
+            "url": "/uploads/8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3.pdf",
+            "category": "documento",
+            "mime_type": "application/pdf",
+            "size_bytes": 260610,
+            "stored_name": "8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3.pdf",
+            "uploaded_at": "2026-05-12T08:25:14.129915+00:00",
+            "original_name": "LDA-93-59-AL.pdf"
+        },
+        {
+            "id": "31167bb2-9afd-4fa7-9e50-a486b1674537",
+            "url": "/uploads/31167bb2-9afd-4fa7-9e50-a486b1674537.png",
+            "category": "documento",
+            "mime_type": "image/png",
+            "size_bytes": 2829347,
+            "stored_name": "31167bb2-9afd-4fa7-9e50-a486b1674537.png",
+            "uploaded_at": "2026-05-12T08:25:14.136991+00:00",
+            "original_name": "Adriano Vasco.PNG"
+        },
+        {
+            "id": "f1338037-c889-4a0f-9ea3-21cc1969378d",
+            "url": "/uploads/f1338037-c889-4a0f-9ea3-21cc1969378d.png",
+            "category": "documento",
+            "mime_type": "image/png",
+            "size_bytes": 2945507,
+            "stored_name": "f1338037-c889-4a0f-9ea3-21cc1969378d.png",
+            "uploaded_at": "2026-05-12T08:25:14.142663+00:00",
+            "original_name": "Antonio Manuel.PNG"
+        },
+        {
+            "id": "aade1b4d-853a-4e2b-860e-5afb79fae206",
+            "url": "/uploads/aade1b4d-853a-4e2b-860e-5afb79fae206.png",
+            "category": "documento",
+            "mime_type": "image/png",
+            "size_bytes": 2988283,
+            "stored_name": "aade1b4d-853a-4e2b-860e-5afb79fae206.png",
+            "uploaded_at": "2026-05-12T08:25:14.148824+00:00",
+            "original_name": "Carlos.PNG"
+        },
+        {
+            "id": "627d3c2b-3a5d-4845-a904-3a3a0adf9694",
+            "url": "/uploads/627d3c2b-3a5d-4845-a904-3a3a0adf9694.png",
+            "category": "documento",
+            "mime_type": "image/png",
+            "size_bytes": 2177525,
+            "stored_name": "627d3c2b-3a5d-4845-a904-3a3a0adf9694.png",
+            "uploaded_at": "2026-05-12T08:25:14.153848+00:00",
+            "original_name": "Jorge Ventura.PNG"
+        },
+        {
+            "id": "7a35accf-5655-40bd-8caa-bfa833cbb719",
+            "url": "/uploads/7a35accf-5655-40bd-8caa-bfa833cbb719.png",
+            "category": "documento",
+            "mime_type": "image/png",
+            "size_bytes": 1990748,
+            "stored_name": "7a35accf-5655-40bd-8caa-bfa833cbb719.png",
+            "uploaded_at": "2026-05-12T08:25:14.15739+00:00",
+            "original_name": "Josó Pereira.PNG"
+        },
+        {
+            "id": "28fe6bc3-8487-4498-99ed-5b980914535d",
+            "url": "/uploads/28fe6bc3-8487-4498-99ed-5b980914535d.pdf",
+            "category": "documento",
+            "mime_type": "application/pdf",
+            "size_bytes": 1150216,
+            "stored_name": "28fe6bc3-8487-4498-99ed-5b980914535d.pdf",
+            "uploaded_at": "2026-05-12T09:18:08.358852+00:00",
+            "original_name": "documentos_convertidos.pdf"
+        }
+    ],
+    "app_state": [
+        {
+            "id": "main",
+            "payload": {
+                "notes": [
+                ],
+                "theme": "light",
+                "events": [
+                ],
+                "company": {
+                    "nif": "5000848280",
+                    "name": "UHOCHA - Comércio & Prestação de Serviços, Lda.",
+                    "location": "Lubango, Huíla"
+                },
+                "drivers": [
+                    {
+                        "bi": "005840543LA049",
+                        "id": "353e40d1-6b3f-4086-80d4-c83a15c0bada",
+                        "name": "ADRIANO VASCO MIGUEL",
+                        "files": {
+                            "bi": {
+                                "id": "31167bb2-9afd-4fa7-9e50-a486b1674537",
+                                "url": "/uploads/31167bb2-9afd-4fa7-9e50-a486b1674537.png",
+                                "originalName": "Adriano Vasco.PNG"
+                            }
+                        },
+                        "address": "CASA Nº54 BAIRRO ROCHA PINTO MAIANGA",
+                        "biValid": "2027-07-04",
+                        "license": "LD-602065",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.137Z",
+                        "licenseValid": "2029-12-09"
+                    },
+                    {
+                        "bi": "006282445KS035",
+                        "id": "ca65619b-8949-4aa9-a110-17d211bda448",
+                        "name": "ANTÓNIO DE OLIVEIRA MANUEL",
+                        "files": {
+                            "bi": {
+                                "id": "f1338037-c889-4a0f-9ea3-21cc1969378d",
+                                "url": "/uploads/f1338037-c889-4a0f-9ea3-21cc1969378d.png",
+                                "originalName": "Antonio Manuel.PNG"
+                            }
+                        },
+                        "address": "RUA 88 CASA Nº 58 ZONA 9 BAIRRO CASSEQUEL MAIANGA",
+                        "biValid": "2030-12-02",
+                        "license": "KM-36662",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.143Z",
+                        "licenseValid": "2039-02-12"
+                    },
+                    {
+                        "bi": "005292663LN043",
+                        "id": "0b9c6c48-c864-4f7b-a8da-d9f7a074a64b",
+                        "name": "CARLOS JORGE DOMINGOS",
+                        "files": {
+                            "bi": {
+                                "id": "aade1b4d-853a-4e2b-860e-5afb79fae206",
+                                "url": "/uploads/aade1b4d-853a-4e2b-860e-5afb79fae206.png",
+                                "originalName": "Carlos.PNG"
+                            }
+                        },
+                        "address": "CASA S/Nº BAIRRO VILA CUANGO",
+                        "biValid": "2032-04-05",
+                        "license": "LN-18299",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.149Z",
+                        "licenseValid": "2039-05-07"
+                    },
+                    {
+                        "bi": "005329559ME043",
+                        "id": "95ade306-3c82-45da-9f23-b5a6f69be31f",
+                        "name": "JORGE VENTURA CANDA GONGA",
+                        "files": {
+                            "bi": {
+                                "id": "627d3c2b-3a5d-4845-a904-3a3a0adf9694",
+                                "url": "/uploads/627d3c2b-3a5d-4845-a904-3a3a0adf9694.png",
+                                "originalName": "Jorge Ventura.PNG"
+                            }
+                        },
+                        "address": "CASA S/Nº BAIRRO BENFICA TALATONA",
+                        "biValid": "2033-05-19",
+                        "license": "LD-387005",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.154Z",
+                        "licenseValid": "2037-08-06"
+                    },
+                    {
+                        "bi": "000659602LA037",
+                        "id": "95ed6e00-1406-46d0-b295-0a9b36098c79",
+                        "name": "JOSÉ CÂNDIDO PEREIRA",
+                        "files": {
+                            "bi": {
+                                "id": "7a35accf-5655-40bd-8caa-bfa833cbb719",
+                                "url": "/uploads/7a35accf-5655-40bd-8caa-bfa833cbb719.png",
+                                "originalName": "Josó Pereira.PNG"
+                            }
+                        },
+                        "address": "RUA 7 CASA S/Nº BAIRRO ZANGO I VIANA",
+                        "biValid": "2033-12-27",
+                        "license": "",
+                        "category": "",
+                        "createdAt": "2026-05-12T08:25:14.157Z",
+                        "licenseValid": ""
+                    }
+                ],
+                "version": 1,
+                "expenses": [
+                ],
+                "payments": [
+                ],
+                "settings": {
+                    "province": "Luanda",
+                    "trialDays": 30,
+                    "weeklyFee": 130000,
+                    "deliveryDay": 1,
+                    "deliveryHour": "12:00",
+                    "fineOffHours": 50000,
+                    "penaltyLate24": 5000,
+                    "penaltyLate72": 15000,
+                    "contractMonths": 12,
+                    "deductibleLimit": 80000,
+                    "returnDelayDaily": 30000,
+                    "maintenanceDayName": "Segunda-feira"
+                },
+                "vehicles": [
+                    {
+                        "id": "06c7ac8f-dc6d-427d-91e9-199be3dfc93a",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "43a4374b-d606-4057-9c7f-18ff9c423fef",
+                                "url": "/uploads/43a4374b-d606-4057-9c7f-18ff9c423fef.pdf",
+                                "originalName": "LDA-06-19-AM.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-06-19-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA583148",
+                        "createdAt": "2026-05-12T08:25:14.121Z"
+                    },
+                    {
+                        "id": "dadd3df0-507b-4d12-a79c-a333cf1e110e",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "de631329-aa21-454a-b5f2-c272cbd5bec7",
+                                "url": "/uploads/de631329-aa21-454a-b5f2-c272cbd5bec7.pdf",
+                                "originalName": "LDA-10-35-AM.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-10-35-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA590529",
+                        "createdAt": "2026-05-12T08:25:14.126Z"
+                    },
+                    {
+                        "id": "359c7107-a9da-49a0-a100-af851ccfaa42",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "5e546b1f-0ccf-417e-8ecf-9f8706f1d5be",
+                                "url": "/uploads/5e546b1f-0ccf-417e-8ecf-9f8706f1d5be.pdf",
+                                "originalName": "LDA-93-38-AL.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-93-38-AL",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA596238",
+                        "createdAt": "2026-05-12T08:25:14.128Z"
+                    },
+                    {
+                        "id": "e08dd1dc-4d3d-4bc2-8825-dec1ad072e64",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3",
+                                "url": "/uploads/8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3.pdf",
+                                "originalName": "LDA-93-59-AL.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-93-59-AL",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA595605",
+                        "createdAt": "2026-05-12T08:25:14.131Z"
+                    },
+                    {
+                        "id": "f13e0f54-b338-4e3e-82e6-7e65315132a2",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "BRANCA",
+                        "files": {
+                            "booklet": {
+                                "id": "28fe6bc3-8487-4498-99ed-5b980914535d",
+                                "url": "/uploads/28fe6bc3-8487-4498-99ed-5b980914535d.pdf",
+                                "originalName": "documentos_convertidos.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO MT",
+                        "plate": "LDA-21-95-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA590389",
+                        "createdAt": "2026-05-12T09:18:08.369Z"
+                    }
+                ],
+                "documents": [
+                ],
+                "assignments": [
+                ]
+            },
+            "version": 1,
+            "created_at": "2026-05-11T20:10:20.92593+00:00",
+            "updated_at": "2026-05-12T10:13:02.586482+00:00"
+        }
+    ],
+    "app_state_audit": [
+        {
+            "id": 1,
+            "source": "http://192.168.1.14:3000",
+            "payload": {
+                "notes": [
+                ],
+                "theme": "light",
+                "events": [
+                ],
+                "company": {
+                    "nif": "5000848280",
+                    "name": "UHOCHA - Comércio & Prestação de Serviços, Lda.",
+                    "location": "Lubango, Huíla"
+                },
+                "drivers": [
+                ],
+                "version": 1,
+                "expenses": [
+                ],
+                "payments": [
+                ],
+                "settings": {
+                    "province": "Luanda",
+                    "trialDays": 30,
+                    "weeklyFee": 130000,
+                    "deliveryDay": 1,
+                    "deliveryHour": "12:00",
+                    "fineOffHours": 50000,
+                    "penaltyLate24": 5000,
+                    "penaltyLate72": 15000,
+                    "contractMonths": 12,
+                    "deductibleLimit": 80000,
+                    "returnDelayDaily": 30000,
+                    "maintenanceDayName": "Segunda-feira"
+                },
+                "vehicles": [
+                    {
+                        "id": "1778530221041-d2106b98ebb79",
+                        "year": "",
+                        "brand": "Suzuki",
+                        "color": "",
+                        "model": "Express",
+                        "plate": "",
+                        "status": "ativo",
+                        "booklet": "",
+                        "chassis": "",
+                        "mileage": "",
+                        "driverId": "",
+                        "createdAt": "2026-05-11T20:10:21.041Z",
+                        "propertyTitle": "",
+                        "insurancePolicy": ""
+                    }
+                ],
+                "documents": [
+                ]
+            },
+            "saved_at": "2026-05-11T20:10:20.933583+00:00",
+            "state_id": "main"
+        },
+        {
+            "id": 2,
+            "source": "http://localhost:3000",
+            "payload": {
+                "notes": [
+                ],
+                "theme": "dark",
+                "events": [
+                ],
+                "company": {
+                    "nif": "5000848280",
+                    "name": "UHOCHA - Comércio & Prestação de Serviços, Lda.",
+                    "location": "Lubango, Huíla"
+                },
+                "drivers": [
+                ],
+                "version": 1,
+                "expenses": [
+                ],
+                "payments": [
+                ],
+                "settings": {
+                    "province": "Luanda",
+                    "trialDays": 30,
+                    "weeklyFee": 130000,
+                    "deliveryDay": 1,
+                    "deliveryHour": "12:00",
+                    "fineOffHours": 50000,
+                    "penaltyLate24": 5000,
+                    "penaltyLate72": 15000,
+                    "contractMonths": 12,
+                    "deductibleLimit": 80000,
+                    "returnDelayDaily": 30000,
+                    "maintenanceDayName": "Segunda-feira"
+                },
+                "vehicles": [
+                    {
+                        "id": "1778530221041-d2106b98ebb79",
+                        "year": "",
+                        "brand": "Suzuki",
+                        "color": "",
+                        "model": "Express",
+                        "plate": "",
+                        "status": "ativo",
+                        "booklet": "",
+                        "chassis": "",
+                        "mileage": "",
+                        "driverId": "",
+                        "createdAt": "2026-05-11T20:10:21.041Z",
+                        "propertyTitle": "",
+                        "insurancePolicy": ""
+                    }
+                ],
+                "documents": [
+                ]
+            },
+            "saved_at": "2026-05-12T07:08:21.630907+00:00",
+            "state_id": "main"
+        },
+        {
+            "id": 3,
+            "source": "http://localhost:3000",
+            "payload": {
+                "notes": [
+                ],
+                "theme": "light",
+                "events": [
+                ],
+                "company": {
+                    "nif": "5000848280",
+                    "name": "UHOCHA - Comércio & Prestação de Serviços, Lda.",
+                    "location": "Lubango, Huíla"
+                },
+                "drivers": [
+                ],
+                "version": 1,
+                "expenses": [
+                ],
+                "payments": [
+                ],
+                "settings": {
+                    "province": "Luanda",
+                    "trialDays": 30,
+                    "weeklyFee": 130000,
+                    "deliveryDay": 1,
+                    "deliveryHour": "12:00",
+                    "fineOffHours": 50000,
+                    "penaltyLate24": 5000,
+                    "penaltyLate72": 15000,
+                    "contractMonths": 12,
+                    "deductibleLimit": 80000,
+                    "returnDelayDaily": 30000,
+                    "maintenanceDayName": "Segunda-feira"
+                },
+                "vehicles": [
+                    {
+                        "id": "1778530221041-d2106b98ebb79",
+                        "year": "",
+                        "brand": "Suzuki",
+                        "color": "",
+                        "model": "Express",
+                        "plate": "",
+                        "status": "ativo",
+                        "booklet": "",
+                        "chassis": "",
+                        "mileage": "",
+                        "driverId": "",
+                        "createdAt": "2026-05-11T20:10:21.041Z",
+                        "propertyTitle": "",
+                        "insurancePolicy": ""
+                    }
+                ],
+                "documents": [
+                ]
+            },
+            "saved_at": "2026-05-12T07:08:25.914966+00:00",
+            "state_id": "main"
+        },
+        {
+            "id": 4,
+            "source": "http://localhost:3000",
+            "payload": {
+                "notes": [
+                ],
+                "theme": "light",
+                "events": [
+                ],
+                "company": {
+                    "nif": "5000848280",
+                    "name": "UHOCHA - Comércio & Prestação de Serviços, Lda.",
+                    "location": "Lubango, Huíla"
+                },
+                "drivers": [
+                    {
+                        "bi": "005840543LA049",
+                        "id": "353e40d1-6b3f-4086-80d4-c83a15c0bada",
+                        "name": "ADRIANO VASCO MIGUEL",
+                        "files": {
+                            "bi": {
+                                "id": "31167bb2-9afd-4fa7-9e50-a486b1674537",
+                                "url": "/uploads/31167bb2-9afd-4fa7-9e50-a486b1674537.png",
+                                "originalName": "Adriano Vasco.PNG"
+                            }
+                        },
+                        "address": "CASA Nº54 BAIRRO ROCHA PINTO MAIANGA",
+                        "biValid": "2027-07-04",
+                        "license": "LD-602065",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.137Z",
+                        "licenseValid": "2029-12-09"
+                    },
+                    {
+                        "bi": "006282445KS035",
+                        "id": "ca65619b-8949-4aa9-a110-17d211bda448",
+                        "name": "ANTÓNIO DE OLIVEIRA MANUEL",
+                        "files": {
+                            "bi": {
+                                "id": "f1338037-c889-4a0f-9ea3-21cc1969378d",
+                                "url": "/uploads/f1338037-c889-4a0f-9ea3-21cc1969378d.png",
+                                "originalName": "Antonio Manuel.PNG"
+                            }
+                        },
+                        "address": "RUA 88 CASA Nº 58 ZONA 9 BAIRRO CASSEQUEL MAIANGA",
+                        "biValid": "2030-12-02",
+                        "license": "KM-36662",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.143Z",
+                        "licenseValid": "2039-02-12"
+                    },
+                    {
+                        "bi": "005292663LN043",
+                        "id": "0b9c6c48-c864-4f7b-a8da-d9f7a074a64b",
+                        "name": "CARLOS JORGE DOMINGOS",
+                        "files": {
+                            "bi": {
+                                "id": "aade1b4d-853a-4e2b-860e-5afb79fae206",
+                                "url": "/uploads/aade1b4d-853a-4e2b-860e-5afb79fae206.png",
+                                "originalName": "Carlos.PNG"
+                            }
+                        },
+                        "address": "CASA S/Nº BAIRRO VILA CUANGO",
+                        "biValid": "2032-04-05",
+                        "license": "LN-18299",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.149Z",
+                        "licenseValid": "2039-05-07"
+                    },
+                    {
+                        "bi": "005329559ME043",
+                        "id": "95ade306-3c82-45da-9f23-b5a6f69be31f",
+                        "name": "JORGE VENTURA CANDA GONGA",
+                        "files": {
+                            "bi": {
+                                "id": "627d3c2b-3a5d-4845-a904-3a3a0adf9694",
+                                "url": "/uploads/627d3c2b-3a5d-4845-a904-3a3a0adf9694.png",
+                                "originalName": "Jorge Ventura.PNG"
+                            }
+                        },
+                        "address": "CASA S/Nº BAIRRO BENFICA TALATONA",
+                        "biValid": "2033-05-19",
+                        "license": "LD-387005",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.154Z",
+                        "licenseValid": "2037-08-06"
+                    },
+                    {
+                        "bi": "000659602LA037",
+                        "id": "95ed6e00-1406-46d0-b295-0a9b36098c79",
+                        "name": "JOSÉ CÂNDIDO PEREIRA",
+                        "files": {
+                            "bi": {
+                                "id": "7a35accf-5655-40bd-8caa-bfa833cbb719",
+                                "url": "/uploads/7a35accf-5655-40bd-8caa-bfa833cbb719.png",
+                                "originalName": "Josó Pereira.PNG"
+                            }
+                        },
+                        "address": "RUA 7 CASA S/Nº BAIRRO ZANGO I VIANA",
+                        "biValid": "2033-12-27",
+                        "license": "",
+                        "category": "",
+                        "createdAt": "2026-05-12T08:25:14.157Z",
+                        "licenseValid": ""
+                    }
+                ],
+                "version": 1,
+                "expenses": [
+                ],
+                "payments": [
+                ],
+                "settings": {
+                    "province": "Luanda",
+                    "trialDays": 30,
+                    "weeklyFee": 130000,
+                    "deliveryDay": 1,
+                    "deliveryHour": "12:00",
+                    "fineOffHours": 50000,
+                    "penaltyLate24": 5000,
+                    "penaltyLate72": 15000,
+                    "contractMonths": 12,
+                    "deductibleLimit": 80000,
+                    "returnDelayDaily": 30000,
+                    "maintenanceDayName": "Segunda-feira"
+                },
+                "vehicles": [
+                    {
+                        "id": "06c7ac8f-dc6d-427d-91e9-199be3dfc93a",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "43a4374b-d606-4057-9c7f-18ff9c423fef",
+                                "url": "/uploads/43a4374b-d606-4057-9c7f-18ff9c423fef.pdf",
+                                "originalName": "LDA-06-19-AM.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-06-19-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA583148",
+                        "createdAt": "2026-05-12T08:25:14.121Z"
+                    },
+                    {
+                        "id": "dadd3df0-507b-4d12-a79c-a333cf1e110e",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "de631329-aa21-454a-b5f2-c272cbd5bec7",
+                                "url": "/uploads/de631329-aa21-454a-b5f2-c272cbd5bec7.pdf",
+                                "originalName": "LDA-10-35-AM.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-10-35-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA590529",
+                        "createdAt": "2026-05-12T08:25:14.126Z"
+                    },
+                    {
+                        "id": "359c7107-a9da-49a0-a100-af851ccfaa42",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "5e546b1f-0ccf-417e-8ecf-9f8706f1d5be",
+                                "url": "/uploads/5e546b1f-0ccf-417e-8ecf-9f8706f1d5be.pdf",
+                                "originalName": "LDA-93-38-AL.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-93-38-AL",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA596238",
+                        "createdAt": "2026-05-12T08:25:14.128Z"
+                    },
+                    {
+                        "id": "e08dd1dc-4d3d-4bc2-8825-dec1ad072e64",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3",
+                                "url": "/uploads/8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3.pdf",
+                                "originalName": "LDA-93-59-AL.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-93-59-AL",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA595605",
+                        "createdAt": "2026-05-12T08:25:14.131Z"
+                    }
+                ],
+                "documents": [
+                ],
+                "assignments": [
+                ]
+            },
+            "saved_at": "2026-05-12T08:57:54.237496+00:00",
+            "state_id": "main"
+        },
+        {
+            "id": 5,
+            "source": "https://frotauhocha.up.railway.app",
+            "payload": {
+                "notes": [
+                ],
+                "theme": "dark",
+                "events": [
+                ],
+                "company": {
+                    "nif": "5000848280",
+                    "name": "UHOCHA - Comércio & Prestação de Serviços, Lda.",
+                    "location": "Lubango, Huíla"
+                },
+                "drivers": [
+                    {
+                        "bi": "005840543LA049",
+                        "id": "353e40d1-6b3f-4086-80d4-c83a15c0bada",
+                        "name": "ADRIANO VASCO MIGUEL",
+                        "files": {
+                            "bi": {
+                                "id": "31167bb2-9afd-4fa7-9e50-a486b1674537",
+                                "url": "/uploads/31167bb2-9afd-4fa7-9e50-a486b1674537.png",
+                                "originalName": "Adriano Vasco.PNG"
+                            }
+                        },
+                        "address": "CASA Nº54 BAIRRO ROCHA PINTO MAIANGA",
+                        "biValid": "2027-07-04",
+                        "license": "LD-602065",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.137Z",
+                        "licenseValid": "2029-12-09"
+                    },
+                    {
+                        "bi": "006282445KS035",
+                        "id": "ca65619b-8949-4aa9-a110-17d211bda448",
+                        "name": "ANTÓNIO DE OLIVEIRA MANUEL",
+                        "files": {
+                            "bi": {
+                                "id": "f1338037-c889-4a0f-9ea3-21cc1969378d",
+                                "url": "/uploads/f1338037-c889-4a0f-9ea3-21cc1969378d.png",
+                                "originalName": "Antonio Manuel.PNG"
+                            }
+                        },
+                        "address": "RUA 88 CASA Nº 58 ZONA 9 BAIRRO CASSEQUEL MAIANGA",
+                        "biValid": "2030-12-02",
+                        "license": "KM-36662",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.143Z",
+                        "licenseValid": "2039-02-12"
+                    },
+                    {
+                        "bi": "005292663LN043",
+                        "id": "0b9c6c48-c864-4f7b-a8da-d9f7a074a64b",
+                        "name": "CARLOS JORGE DOMINGOS",
+                        "files": {
+                            "bi": {
+                                "id": "aade1b4d-853a-4e2b-860e-5afb79fae206",
+                                "url": "/uploads/aade1b4d-853a-4e2b-860e-5afb79fae206.png",
+                                "originalName": "Carlos.PNG"
+                            }
+                        },
+                        "address": "CASA S/Nº BAIRRO VILA CUANGO",
+                        "biValid": "2032-04-05",
+                        "license": "LN-18299",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.149Z",
+                        "licenseValid": "2039-05-07"
+                    },
+                    {
+                        "bi": "005329559ME043",
+                        "id": "95ade306-3c82-45da-9f23-b5a6f69be31f",
+                        "name": "JORGE VENTURA CANDA GONGA",
+                        "files": {
+                            "bi": {
+                                "id": "627d3c2b-3a5d-4845-a904-3a3a0adf9694",
+                                "url": "/uploads/627d3c2b-3a5d-4845-a904-3a3a0adf9694.png",
+                                "originalName": "Jorge Ventura.PNG"
+                            }
+                        },
+                        "address": "CASA S/Nº BAIRRO BENFICA TALATONA",
+                        "biValid": "2033-05-19",
+                        "license": "LD-387005",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.154Z",
+                        "licenseValid": "2037-08-06"
+                    },
+                    {
+                        "bi": "000659602LA037",
+                        "id": "95ed6e00-1406-46d0-b295-0a9b36098c79",
+                        "name": "JOSÉ CÂNDIDO PEREIRA",
+                        "files": {
+                            "bi": {
+                                "id": "7a35accf-5655-40bd-8caa-bfa833cbb719",
+                                "url": "/uploads/7a35accf-5655-40bd-8caa-bfa833cbb719.png",
+                                "originalName": "Josó Pereira.PNG"
+                            }
+                        },
+                        "address": "RUA 7 CASA S/Nº BAIRRO ZANGO I VIANA",
+                        "biValid": "2033-12-27",
+                        "license": "",
+                        "category": "",
+                        "createdAt": "2026-05-12T08:25:14.157Z",
+                        "licenseValid": ""
+                    }
+                ],
+                "version": 1,
+                "expenses": [
+                ],
+                "payments": [
+                ],
+                "settings": {
+                    "province": "Luanda",
+                    "trialDays": 30,
+                    "weeklyFee": 130000,
+                    "deliveryDay": 1,
+                    "deliveryHour": "12:00",
+                    "fineOffHours": 50000,
+                    "penaltyLate24": 5000,
+                    "penaltyLate72": 15000,
+                    "contractMonths": 12,
+                    "deductibleLimit": 80000,
+                    "returnDelayDaily": 30000,
+                    "maintenanceDayName": "Segunda-feira"
+                },
+                "vehicles": [
+                    {
+                        "id": "06c7ac8f-dc6d-427d-91e9-199be3dfc93a",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "43a4374b-d606-4057-9c7f-18ff9c423fef",
+                                "url": "/uploads/43a4374b-d606-4057-9c7f-18ff9c423fef.pdf",
+                                "originalName": "LDA-06-19-AM.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-06-19-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA583148",
+                        "createdAt": "2026-05-12T08:25:14.121Z"
+                    },
+                    {
+                        "id": "dadd3df0-507b-4d12-a79c-a333cf1e110e",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "de631329-aa21-454a-b5f2-c272cbd5bec7",
+                                "url": "/uploads/de631329-aa21-454a-b5f2-c272cbd5bec7.pdf",
+                                "originalName": "LDA-10-35-AM.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-10-35-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA590529",
+                        "createdAt": "2026-05-12T08:25:14.126Z"
+                    },
+                    {
+                        "id": "359c7107-a9da-49a0-a100-af851ccfaa42",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "5e546b1f-0ccf-417e-8ecf-9f8706f1d5be",
+                                "url": "/uploads/5e546b1f-0ccf-417e-8ecf-9f8706f1d5be.pdf",
+                                "originalName": "LDA-93-38-AL.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-93-38-AL",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA596238",
+                        "createdAt": "2026-05-12T08:25:14.128Z"
+                    },
+                    {
+                        "id": "e08dd1dc-4d3d-4bc2-8825-dec1ad072e64",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3",
+                                "url": "/uploads/8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3.pdf",
+                                "originalName": "LDA-93-59-AL.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-93-59-AL",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA595605",
+                        "createdAt": "2026-05-12T08:25:14.131Z"
+                    },
+                    {
+                        "id": "f13e0f54-b338-4e3e-82e6-7e65315132a2",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "BRANCA",
+                        "files": {
+                            "booklet": {
+                                "id": "28fe6bc3-8487-4498-99ed-5b980914535d",
+                                "url": "/uploads/28fe6bc3-8487-4498-99ed-5b980914535d.pdf",
+                                "originalName": "documentos_convertidos.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO MT",
+                        "plate": "LDA-21-95-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA590389",
+                        "createdAt": "2026-05-12T09:18:08.369Z"
+                    }
+                ],
+                "documents": [
+                ],
+                "assignments": [
+                ]
+            },
+            "saved_at": "2026-05-12T10:12:40.412322+00:00",
+            "state_id": "main"
+        },
+        {
+            "id": 6,
+            "source": "https://frotauhocha.up.railway.app",
+            "payload": {
+                "notes": [
+                ],
+                "theme": "light",
+                "events": [
+                ],
+                "company": {
+                    "nif": "5000848280",
+                    "name": "UHOCHA - Comércio & Prestação de Serviços, Lda.",
+                    "location": "Lubango, Huíla"
+                },
+                "drivers": [
+                    {
+                        "bi": "005840543LA049",
+                        "id": "353e40d1-6b3f-4086-80d4-c83a15c0bada",
+                        "name": "ADRIANO VASCO MIGUEL",
+                        "files": {
+                            "bi": {
+                                "id": "31167bb2-9afd-4fa7-9e50-a486b1674537",
+                                "url": "/uploads/31167bb2-9afd-4fa7-9e50-a486b1674537.png",
+                                "originalName": "Adriano Vasco.PNG"
+                            }
+                        },
+                        "address": "CASA Nº54 BAIRRO ROCHA PINTO MAIANGA",
+                        "biValid": "2027-07-04",
+                        "license": "LD-602065",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.137Z",
+                        "licenseValid": "2029-12-09"
+                    },
+                    {
+                        "bi": "006282445KS035",
+                        "id": "ca65619b-8949-4aa9-a110-17d211bda448",
+                        "name": "ANTÓNIO DE OLIVEIRA MANUEL",
+                        "files": {
+                            "bi": {
+                                "id": "f1338037-c889-4a0f-9ea3-21cc1969378d",
+                                "url": "/uploads/f1338037-c889-4a0f-9ea3-21cc1969378d.png",
+                                "originalName": "Antonio Manuel.PNG"
+                            }
+                        },
+                        "address": "RUA 88 CASA Nº 58 ZONA 9 BAIRRO CASSEQUEL MAIANGA",
+                        "biValid": "2030-12-02",
+                        "license": "KM-36662",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.143Z",
+                        "licenseValid": "2039-02-12"
+                    },
+                    {
+                        "bi": "005292663LN043",
+                        "id": "0b9c6c48-c864-4f7b-a8da-d9f7a074a64b",
+                        "name": "CARLOS JORGE DOMINGOS",
+                        "files": {
+                            "bi": {
+                                "id": "aade1b4d-853a-4e2b-860e-5afb79fae206",
+                                "url": "/uploads/aade1b4d-853a-4e2b-860e-5afb79fae206.png",
+                                "originalName": "Carlos.PNG"
+                            }
+                        },
+                        "address": "CASA S/Nº BAIRRO VILA CUANGO",
+                        "biValid": "2032-04-05",
+                        "license": "LN-18299",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.149Z",
+                        "licenseValid": "2039-05-07"
+                    },
+                    {
+                        "bi": "005329559ME043",
+                        "id": "95ade306-3c82-45da-9f23-b5a6f69be31f",
+                        "name": "JORGE VENTURA CANDA GONGA",
+                        "files": {
+                            "bi": {
+                                "id": "627d3c2b-3a5d-4845-a904-3a3a0adf9694",
+                                "url": "/uploads/627d3c2b-3a5d-4845-a904-3a3a0adf9694.png",
+                                "originalName": "Jorge Ventura.PNG"
+                            }
+                        },
+                        "address": "CASA S/Nº BAIRRO BENFICA TALATONA",
+                        "biValid": "2033-05-19",
+                        "license": "LD-387005",
+                        "category": "D",
+                        "createdAt": "2026-05-12T08:25:14.154Z",
+                        "licenseValid": "2037-08-06"
+                    },
+                    {
+                        "bi": "000659602LA037",
+                        "id": "95ed6e00-1406-46d0-b295-0a9b36098c79",
+                        "name": "JOSÉ CÂNDIDO PEREIRA",
+                        "files": {
+                            "bi": {
+                                "id": "7a35accf-5655-40bd-8caa-bfa833cbb719",
+                                "url": "/uploads/7a35accf-5655-40bd-8caa-bfa833cbb719.png",
+                                "originalName": "Josó Pereira.PNG"
+                            }
+                        },
+                        "address": "RUA 7 CASA S/Nº BAIRRO ZANGO I VIANA",
+                        "biValid": "2033-12-27",
+                        "license": "",
+                        "category": "",
+                        "createdAt": "2026-05-12T08:25:14.157Z",
+                        "licenseValid": ""
+                    }
+                ],
+                "version": 1,
+                "expenses": [
+                ],
+                "payments": [
+                ],
+                "settings": {
+                    "province": "Luanda",
+                    "trialDays": 30,
+                    "weeklyFee": 130000,
+                    "deliveryDay": 1,
+                    "deliveryHour": "12:00",
+                    "fineOffHours": 50000,
+                    "penaltyLate24": 5000,
+                    "penaltyLate72": 15000,
+                    "contractMonths": 12,
+                    "deductibleLimit": 80000,
+                    "returnDelayDaily": 30000,
+                    "maintenanceDayName": "Segunda-feira"
+                },
+                "vehicles": [
+                    {
+                        "id": "06c7ac8f-dc6d-427d-91e9-199be3dfc93a",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "43a4374b-d606-4057-9c7f-18ff9c423fef",
+                                "url": "/uploads/43a4374b-d606-4057-9c7f-18ff9c423fef.pdf",
+                                "originalName": "LDA-06-19-AM.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-06-19-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA583148",
+                        "createdAt": "2026-05-12T08:25:14.121Z"
+                    },
+                    {
+                        "id": "dadd3df0-507b-4d12-a79c-a333cf1e110e",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "de631329-aa21-454a-b5f2-c272cbd5bec7",
+                                "url": "/uploads/de631329-aa21-454a-b5f2-c272cbd5bec7.pdf",
+                                "originalName": "LDA-10-35-AM.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-10-35-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA590529",
+                        "createdAt": "2026-05-12T08:25:14.126Z"
+                    },
+                    {
+                        "id": "359c7107-a9da-49a0-a100-af851ccfaa42",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "5e546b1f-0ccf-417e-8ecf-9f8706f1d5be",
+                                "url": "/uploads/5e546b1f-0ccf-417e-8ecf-9f8706f1d5be.pdf",
+                                "originalName": "LDA-93-38-AL.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-93-38-AL",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA596238",
+                        "createdAt": "2026-05-12T08:25:14.128Z"
+                    },
+                    {
+                        "id": "e08dd1dc-4d3d-4bc2-8825-dec1ad072e64",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "CINZENTA",
+                        "files": {
+                            "booklet": {
+                                "id": "8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3",
+                                "url": "/uploads/8d2dbc99-41d8-4071-ac9a-85e8a8bd1ab3.pdf",
+                                "originalName": "LDA-93-59-AL.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO M/T",
+                        "plate": "LDA-93-59-AL",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA595605",
+                        "createdAt": "2026-05-12T08:25:14.131Z"
+                    },
+                    {
+                        "id": "f13e0f54-b338-4e3e-82e6-7e65315132a2",
+                        "year": "2026",
+                        "brand": "SUZUKI",
+                        "color": "BRANCA",
+                        "files": {
+                            "booklet": {
+                                "id": "28fe6bc3-8487-4498-99ed-5b980914535d",
+                                "url": "/uploads/28fe6bc3-8487-4498-99ed-5b980914535d.pdf",
+                                "originalName": "documentos_convertidos.pdf"
+                            }
+                        },
+                        "model": "S-PRESSO MT",
+                        "plate": "LDA-21-95-AM",
+                        "status": "ativo",
+                        "chassis": "MA3RFL61STA590389",
+                        "createdAt": "2026-05-12T09:18:08.369Z"
+                    }
+                ],
+                "documents": [
+                ],
+                "assignments": [
+                ]
+            },
+            "saved_at": "2026-05-12T10:13:02.590722+00:00",
+            "state_id": "main"
+        }
+    ]
+}
