@@ -770,7 +770,7 @@
     const initialVehicle = getVehicle(activeAssignmentForDriver(initialDriverId)?.vehicleId);
     const groupRows = assigned.map((driver) => paymentGroupRow(driver)).join("") || empty("Nenhum motorista com viatura atribuída.");
     return `
-      <form class="panel pad form-grid" data-form="payment">
+      <form class="panel pad form-grid payment-form" data-form="payment">
         <div class="field span-3">
           <label>Modo de entrega</label>
           <div class="segmented" data-payment-mode-group>
@@ -796,22 +796,34 @@
           </div>
         </div>
         <div class="payment-mode-section span-3" data-payment-group hidden>
-          <div class="field span-3 payment-group-help">
-            <small class="muted">Selecione um ou mais motoristas. Cada linha pode ter valor próprio; se o valor não for ${money(state.settings.weeklyFee)}, a justificação passa a ser obrigatória.</small>
+          <div class="payment-group-toolbar">
+            <div>
+              <strong>Motoristas incluídos</strong>
+              <small class="muted" data-payment-group-count>0 selecionados</small>
+            </div>
+            <label class="check-item payment-select-all">
+              <input type="checkbox" data-payment-group-select-all />
+              <span>Todos</span>
+            </label>
           </div>
+          <small class="muted payment-group-help">Selecione os motoristas. Pode corrigir o valor de cada um; valores diferentes de ${money(state.settings.weeklyFee)} exigem justificação.</small>
           <div class="payment-group-list" data-payment-group-list>
             ${groupRows}
           </div>
         </div>
-        ${inputField("dueAt", "Vencimento", "datetime-local", toLocalInput(due))}
-        ${inputField("paidAt", "Recebido em", "datetime-local", toLocalInput())}
-        ${inputField("proof", "Comprovativo", "text", "", "placeholder='Transferência, talão ou referência' class='span-2'")}
-        ${fileField("proofFile", "Upload do comprovativo", "accept='image/*,application/pdf'")}
-        <div class="field span-3">
-          <label for="paymentNotes">Notas</label>
-          <textarea id="paymentNotes" name="notes" placeholder="Observações sobre atraso, comprovativo ou acordo."></textarea>
+        <div class="payment-shared-fields span-3">
+          ${inputField("dueAt", "Vencimento", "datetime-local", toLocalInput(due))}
+          ${inputField("paidAt", "Recebido em", "datetime-local", toLocalInput())}
+          ${inputField("proof", "Comprovativo", "text", "", "placeholder='Transferência, talão ou referência' class='span-2'")}
+          ${fileField("proofFile", "Anexar comprovativo", "accept='image/*,application/pdf'")}
+          <div class="field span-3">
+            <label for="paymentNotes">Notas</label>
+            <textarea id="paymentNotes" name="notes" placeholder="Observações sobre atraso, comprovativo ou acordo."></textarea>
+          </div>
         </div>
-        <button class="button full span-3" type="submit">${icon("save")}Guardar entrega</button>
+        <div class="payment-form-actions span-3">
+          <button class="button full" type="submit">${icon("save")}Guardar entrega</button>
+        </div>
       </form>
     `;
   }
@@ -3192,6 +3204,8 @@
     openModalNode = dialog;
     if (dialog.showModal) dialog.showModal();
     else dialog.setAttribute("open", "");
+    const payment = dialog.querySelector("form[data-form='payment']");
+    if (payment) syncPaymentForm(payment);
     const firstInput = dialog.querySelector("input:not([type='hidden']), textarea, button");
     if (firstInput) firstInput.focus({ preventScroll: true });
     return dialog;
@@ -3423,7 +3437,20 @@
           const fields = row.querySelector("[data-payment-group-fields]");
           if (fields) fields.hidden = !event.target.checked;
           syncPaymentJustification(row);
+          syncPaymentGroupSummary(event.target.form);
         }
+      }
+
+      if (event.target.matches("[data-payment-group-select-all]")) {
+        const form = event.target.form;
+        form?.querySelectorAll("[data-payment-group-check]").forEach((check) => {
+          check.checked = event.target.checked;
+          const row = check.closest("[data-payment-group-row]");
+          const fields = row?.querySelector("[data-payment-group-fields]");
+          if (fields) fields.hidden = !check.checked;
+          syncPaymentJustification(row);
+        });
+        syncPaymentGroupSummary(form);
       }
 
       if (event.target.matches("[data-payment-group-amount]")) {
@@ -3502,6 +3529,20 @@
       if (fields) fields.hidden = !selected || mode !== "group";
       syncPaymentJustification(row);
     });
+    syncPaymentGroupSummary(form);
+  }
+
+  function syncPaymentGroupSummary(form) {
+    if (!form) return;
+    const checks = [...form.querySelectorAll("[data-payment-group-check]")];
+    const selected = checks.filter((check) => check.checked).length;
+    const count = form.querySelector("[data-payment-group-count]");
+    const selectAll = form.querySelector("[data-payment-group-select-all]");
+    if (count) count.textContent = `${selected} selecionado${selected === 1 ? "" : "s"}`;
+    if (selectAll) {
+      selectAll.checked = checks.length > 0 && selected === checks.length;
+      selectAll.indeterminate = selected > 0 && selected < checks.length;
+    }
   }
 
   function syncPaymentJustification(scope) {

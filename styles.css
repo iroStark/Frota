@@ -25,6 +25,10 @@
   font-family: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 [data-theme="dark"] {
   color-scheme: dark;
   --bg: #202020;
@@ -304,12 +308,14 @@ a {
   gap: 12px;
   margin: 0 0 18px;
   max-width: 100%;
+  align-items: stretch;
 }
 
 .metric {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   min-width: 0;
-  min-height: 124px;
+  min-height: 132px;
   padding: 18px;
   border: 0;
   border-radius: var(--radius);
@@ -531,37 +537,88 @@ a {
 .payment-mode-section {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .payment-group-help {
-  margin-bottom: -2px;
+  line-height: 1.4;
 }
 
 .payment-group-list {
   display: grid;
   gap: 10px;
-  max-height: min(42vh, 420px);
-  overflow: auto;
-  padding-right: 4px;
+  min-width: 0;
 }
 
 .payment-group-row {
   display: grid;
   gap: 10px;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 16px;
   background: var(--surface);
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.payment-group-row:has(input:checked) {
+  border-color: color-mix(in srgb, var(--accent) 80%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  box-shadow: 0 8px 18px rgba(18, 18, 18, 0.08);
 }
 
 .payment-group-check {
   width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
   justify-content: flex-start;
+  background: transparent;
+  cursor: pointer;
 }
 
 .payment-group-check span {
   display: grid;
-  gap: 2px;
+  gap: 3px;
+  min-width: 0;
+}
+
+.payment-group-check span::before {
+  content: "";
+  grid-row: 1 / span 2;
+  grid-column: 1;
+  align-self: center;
+  width: 21px;
+  height: 21px;
+  margin-right: 2px;
+  border: 2px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  box-sizing: border-box;
+}
+
+.payment-group-check span strong,
+.payment-group-check span small {
+  grid-column: 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.payment-group-check input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+}
+
+.payment-group-check input:focus-visible + span::before {
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.payment-group-check input:checked + span::before {
+  border-color: var(--primary);
+  background: var(--primary);
+  box-shadow: inset 0 0 0 5px var(--primary);
+  background-image: linear-gradient(45deg, transparent 42%, white 43% 54%, transparent 55%), linear-gradient(-45deg, transparent 43%, white 44% 55%, transparent 56%);
 }
 
 .payment-group-check small {
@@ -574,6 +631,48 @@ a {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.payment-group-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.payment-group-toolbar > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.payment-group-toolbar strong {
+  font-size: 0.9rem;
+}
+
+.payment-select-all {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.payment-shared-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  min-width: 0;
+}
+
+.payment-form-actions {
+  position: sticky;
+  bottom: -18px;
+  z-index: 2;
+  padding: 10px 0 0;
+  background: linear-gradient(to bottom, transparent, var(--surface) 22%);
 }
 
 .payment-group-fields .field {
@@ -763,6 +862,12 @@ a {
   width: 18px;
   height: 18px;
   accent-color: var(--accent);
+}
+
+.file-field input[type="file"] {
+  overflow: hidden;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
 }
 
 .button {
@@ -1238,6 +1343,24 @@ tr:last-child td {
     grid-column: 1 / -1;
   }
 
+  .payment-form .payment-mode-section,
+  .payment-form .payment-shared-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .payment-form .payment-mode-section > .field.span-2,
+  .payment-form .payment-shared-fields > .field.span-2 {
+    grid-column: span 2;
+  }
+
+  .payment-form .payment-mode-section > .field.span-3,
+  .payment-form .payment-shared-fields > .field.span-3,
+  .payment-form .payment-group-toolbar,
+  .payment-form .payment-group-help,
+  .payment-form .payment-group-list {
+    grid-column: 1 / -1;
+  }
+
   .kpi-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1350,6 +1473,45 @@ tr:last-child td {
   td:nth-child(6)::before {
     content: "Notas";
   }
+
+  .modal {
+    width: calc(100vw - 12px);
+    max-width: none;
+    max-height: calc(100dvh - 12px);
+    border-radius: 20px;
+  }
+
+  .modal-head {
+    padding: 14px 14px 8px;
+  }
+
+  .modal-head h2 {
+    font-size: 1.08rem;
+  }
+
+  .modal-body {
+    padding: 0 14px 14px;
+  }
+
+  .payment-form {
+    gap: 12px;
+  }
+
+  .payment-form-actions {
+    bottom: -14px;
+  }
+
+  .payment-group-toolbar {
+    align-items: flex-start;
+  }
+
+  .payment-group-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-group-fields .field.span-2 {
+    grid-column: auto;
+  }
 }
 
 @media (max-width: 420px) {
@@ -1408,6 +1570,15 @@ tr:last-child td {
     font-size: clamp(1.45rem, 10vw, 2.15rem);
   }
 
+  .metric-grid {
+    gap: 10px;
+  }
+
+  .metric {
+    min-height: 118px;
+    padding: 14px;
+  }
+
   .panel.pad,
   .contract-rule,
   .record {
@@ -1445,7 +1616,29 @@ tr:last-child td {
   }
 }
 
+@media (min-width: 680px) and (max-width: 1039px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric.wide {
+    grid-column: span 2;
+  }
+}
+
 @media (min-width: 1040px) {
+  .metric-grid {
+    grid-template-columns: minmax(260px, 2fr) repeat(3, minmax(0, 1fr));
+  }
+
+  .metric.wide {
+    grid-column: auto;
+  }
+
+  .kpi-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .form-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1778,9 +1971,10 @@ tr:last-child td {
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow);
-  max-width: min(720px, 96vw);
+  max-width: min(760px, calc(100vw - 24px));
   width: 100%;
-  max-height: 90vh;
+  max-height: min(860px, calc(100dvh - 24px));
+  overflow: hidden;
 }
 
 .modal::backdrop {
@@ -1811,13 +2005,20 @@ tr:last-child td {
 
 .modal-body {
   padding: 0 18px 18px;
-  overflow-y: auto;
-  max-height: calc(90vh - 60px);
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-body .form-grid {
   box-shadow: none;
   padding: 0;
+}
+
+.modal-form {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 /* ===== Section helpers ===== */
