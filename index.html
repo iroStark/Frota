@@ -12,17 +12,22 @@
   </head>
   <body>
     <div class="app-shell">
-      <header class="topbar">
-        <a class="brand" href="#dashboard" aria-label="UHOCHA Controle">
-          <span class="brand-logo" aria-hidden="true">
-            <img src="assets/uhocha-logo.png" alt="UHOCHA Logo" />
-          </span>
-          <div class="brand-copy">
-            <strong>UHOCHA</strong>
-            <small>Controle de táxis</small>
+      <header class="topbar mobile-appbar">
+        <a class="user-profile" href="#dashboard" aria-label="Perfil e Painel">
+          <div class="avatar-badge">
+            <span class="avatar-text">IU</span>
+            <span class="online-dot" title="Sessão Ativa"></span>
+          </div>
+          <div class="user-details">
+            <span class="greeting" id="userGreeting">Olá,</span>
+            <strong class="user-name">Idezibal U.</strong>
           </div>
         </a>
         <div class="top-actions">
+          <a class="icon-button alert-btn" href="#dashboard" id="alertsButton" title="Alertas da frota">
+            <span data-icon="alert"></span>
+            <span class="badge-count" id="alertCountBadge" hidden>0</span>
+          </a>
           <button class="icon-button" id="backupButton" type="button" title="Exportar cópia">
             <span data-icon="download"></span>
           </button>

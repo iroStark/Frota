@@ -642,11 +642,122 @@
     `;
   }
 
+  function syncAutomaticEventStates() {
+    const now = new Date();
+    const nowTime = now.getTime();
+    let stateChanged = false;
+
+    state.events.forEach((evt) => {
+      const startDateStr = evt.startDate || evt.date;
+      if (!startDateStr) return;
+
+      const start = new Date(startDateStr).getTime();
+      let end = null;
+
+      if (evt.endDate) {
+        if (evt.endDate.length <= 10) {
+          const d = new Date(evt.endDate);
+          d.setHours(23, 59, 59, 999);
+          end = d.getTime();
+        } else {
+          end = new Date(evt.endDate).getTime();
+        }
+      }
+
+      if (end && nowTime > end) {
+        if (evt.status !== "resolvido") {
+          evt.status = "resolvido";
+          stateChanged = true;
+
+          if (evt.immobilizeVehicle && evt.vehicleId) {
+            const vehicle = state.vehicles.find((v) => v.id === evt.vehicleId);
+            if (vehicle) {
+              const otherActiveImmobilizing = state.events.some((e) => {
+                if (e.id === evt.id || e.vehicleId !== evt.vehicleId || e.status === "resolvido" || !e.immobilizeVehicle) return false;
+                const eStart = new Date(e.startDate || e.date).getTime();
+                let eEnd = e.endDate ? new Date(e.endDate).getTime() : Infinity;
+                if (e.endDate && e.endDate.length <= 10) {
+                  const ed = new Date(e.endDate);
+                  ed.setHours(23, 59, 59, 999);
+                  eEnd = ed.getTime();
+                }
+                return eStart <= nowTime && nowTime <= eEnd;
+              });
+
+              if (!otherActiveImmobilizing && vehicle.status !== "ativo") {
+                vehicle.status = "ativo";
+                stateChanged = true;
+              }
+            }
+          }
+        }
+      } else if (end && nowTime >= start && nowTime <= end) {
+        if (evt.status === "agendado" || evt.status === "aberto") {
+          evt.status = "em_curso";
+          stateChanged = true;
+
+          if (evt.immobilizeVehicle && evt.vehicleId) {
+            const vehicle = state.vehicles.find((v) => v.id === evt.vehicleId);
+            if (vehicle && vehicle.status === "ativo") {
+              vehicle.status = "inativo";
+              stateChanged = true;
+            }
+          }
+        }
+      } else if (nowTime < start) {
+        if (evt.status !== "agendado" && evt.status !== "resolvido") {
+          evt.status = "agendado";
+          stateChanged = true;
+        }
+      }
+    });
+
+    if (stateChanged) {
+      persistState();
+    }
+  }
+
+  function updateHeaderState() {
+    const now = new Date();
+    const hour = now.getHours();
+    const greetingEl = document.querySelector("#userGreeting");
+    if (greetingEl) {
+      let text = "Olá,";
+      if (hour >= 5 && hour < 12) text = "Bom dia,";
+      else if (hour >= 12 && hour < 18) text = "Boa tarde,";
+      else text = "Boa noite,";
+      greetingEl.textContent = text;
+    }
+
+    const alertBadgeEl = document.querySelector("#alertCountBadge");
+    if (alertBadgeEl) {
+      const summary = calcSummary();
+      const alertCount = summary.alerts ? summary.alerts.length : 0;
+      alertBadgeEl.textContent = String(alertCount);
+      alertBadgeEl.hidden = alertCount === 0;
+    }
+  }
+
+  function pageHead(title, subtitle = "") {
+    const now = new Intl.DateTimeFormat("pt-AO", { weekday: "short", day: "2-digit", month: "short" }).format(new Date());
+    return `
+      <div class="page-head">
+        <div>
+          <h1>${h(title)}</h1>
+          ${subtitle ? `<p>${h(subtitle)}</p>` : ""}
+        </div>
+        <span class="date-chip">${h(now)}</span>
+      </div>
+    `;
+  }
+
   function render() {
+    syncAutomaticEventStates();
     document.documentElement.dataset.theme = state.theme || "light";
     const themeIcon = document.querySelector("#themeButton [data-icon]");
     if (themeIcon) themeIcon.dataset.icon = state.theme === "dark" ? "sun" : "moon";
     installIcons(document.querySelector("#themeButton"));
+    updateHeaderState();
     const navActive = routeParents[activeRoute] || activeRoute;
     document.querySelectorAll("[data-route]").forEach((link) => {
       link.classList.toggle("active", link.dataset.route === navActive);
