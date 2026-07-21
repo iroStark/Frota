@@ -432,6 +432,7 @@
   }
 
   function paymentPenalty(payment, atDate = new Date()) {
+    if (payment.isExempt) return { amount: 0, label: "Isento da Semana", severity: "ok", delayHours: 0 };
     const due = new Date(payment.dueAt);
     const paid = payment.paidAt ? new Date(payment.paidAt) : atDate;
     const delayHours = Math.max(0, (paid - due) / 36e5);
@@ -964,6 +965,19 @@
     return `
       <form class="panel pad form-grid payment-form" data-form="payment">
         <div class="field span-3">
+          <label>Natureza do registo</label>
+          <div class="segmented" data-payment-nature-group>
+            <label class="segmented-option">
+              <input type="radio" name="paymentNature" value="pagamento" checked data-payment-nature onchange="document.querySelectorAll('.payment-values').forEach(e => e.hidden = false); document.querySelectorAll('.payment-exempt').forEach(e => e.hidden = true); document.querySelector('[data-payment-amount]').disabled = false;" />
+              <span>Pagamento Normal</span>
+            </label>
+            <label class="segmented-option">
+              <input type="radio" name="paymentNature" value="isencao" data-payment-nature onchange="document.querySelectorAll('.payment-values').forEach(e => e.hidden = true); document.querySelectorAll('.payment-exempt').forEach(e => e.hidden = false); document.querySelector('[data-payment-amount]').disabled = true;" />
+              <span>Isenção de Semana</span>
+            </label>
+          </div>
+        </div>
+        <div class="field span-3">
           <label>Modo de entrega</label>
           <div class="segmented" data-payment-mode-group>
             <label class="segmented-option">
@@ -980,9 +994,21 @@
           ${selectField("driverId", "Motorista", driverOptions(true, { assignedOnly: true }), initialDriverId, "data-payment-driver class='span-2'")}
           ${inputField("vehicleLabel", "Viatura associada", "text", vehicleName(initialVehicle), "readonly data-payment-vehicle-label")}
           <input type="hidden" name="vehicleId" value="${h(initialVehicle?.id || "")}" data-payment-vehicle />
-          ${inputField("amount", "Valor entregue", "number", state.settings.weeklyFee, "min='0' step='1000' data-payment-amount")}
-          ${inputField("penaltyPaid", "Penalidade paga", "number", 0, "min='0' step='1000'")}
-          <div class="field span-3" data-payment-justification-wrap hidden>
+          
+          <div class="payment-values span-3" style="display: contents;">
+            ${inputField("amount", "Valor entregue", "number", state.settings.weeklyFee, "min='0' step='1000' data-payment-amount")}
+            ${inputField("penaltyPaid", "Penalidade paga", "number", 0, "min='0' step='1000'")}
+          </div>
+          <div class="payment-exempt span-3" hidden style="display: contents;">
+            ${selectField("exemptReason", "Motivo da Isenção", [
+              ["oficina", "Manutenção em Oficina"],
+              ["doenca", "Doença / Baixa Médica"],
+              ["acordo", "Acordo / Férias"],
+              ["outro", "Outro (especificar nas notas)"]
+            ], "oficina")}
+          </div>
+
+          <div class="field span-3 payment-values" data-payment-justification-wrap hidden>
             <label for="paymentJustification">Justificação</label>
             <textarea id="paymentJustification" name="justification" data-payment-justification placeholder="Obrigatória quando o valor for diferente do normal."></textarea>
           </div>
@@ -2525,20 +2551,21 @@
 
   function paymentRecord(payment, compact = false) {
     const penalty = paymentPenalty(payment);
+    const exemptLabel = payment.exemptReason === "oficina" ? "Oficina" : payment.exemptReason === "doenca" ? "Doença" : payment.exemptReason === "acordo" ? "Acordo" : "Isento";
     return `
       <article class="record">
         <div class="record-main">
         <div class="record-title">
-          <strong>${money(payment.amount)}</strong>
+          <strong>${payment.isExempt ? "Isenção de Fecho" : money(payment.amount)}</strong>
           <small>${h(driverName(getDriver(payment.driverId)))} · ${h(vehicleName(getVehicle(payment.vehicleId)))}</small>
         </div>
         ${compact ? "" : `<button class="icon-button" type="button" title="Remover" data-delete="payment" data-id="${h(payment.id)}">${icon("trash")}</button>`}
       </div>
       <div class="badge-row">
-        <span class="badge ${penalty.severity}">${h(penalty.label)}</span>
+        ${payment.isExempt ? `<span class="badge info">${icon("info")}Justificada: ${h(exemptLabel)}</span>` : `<span class="badge ${penalty.severity}">${h(penalty.label)}</span>`}
         <span class="badge">${icon("calendar")}${h(dateTimeLabel(payment.paidAt || payment.dueAt))}</span>
         ${payment.justification ? `<span class="badge">${icon("file")}${h(payment.justification)}</span>` : ""}
-        ${payment.proof ? `<span class="badge">${h(payment.proof)}</span>` : ""}
+        ${payment.notes ? `<span class="badge">${icon("file")}${h(payment.notes)}</span>` : ""}
         ${fileBadge(payment.files?.proof, "Comprovativo")}
       </div>
     </article>
@@ -2938,9 +2965,13 @@
   async function addPayment(data, form) {
     const proofFile = await uploadFile(selectedFile(data, "proofFile"), "entrega-comprovativo");
     const mode = data.paymentMode || "single";
+    const nature = data.paymentNature || "pagamento";
+    const isExempt = nature === "isencao";
     const expectedAmount = Number(state.settings.weeklyFee || 0);
     const baseRecord = {
-      penaltyPaid: Number(data.penaltyPaid || 0),
+      isExempt,
+      exemptReason: isExempt ? data.exemptReason : "",
+      penaltyPaid: isExempt ? 0 : Number(data.penaltyPaid || 0),
       dueAt: data.dueAt ? new Date(data.dueAt).toISOString() : dueDateTime().toISOString(),
       paidAt: data.paidAt ? new Date(data.paidAt).toISOString() : "",
       proof: data.proof,
@@ -2957,9 +2988,9 @@
         id: uid(),
         vehicleId,
         driverId,
-        amount: Number(amount || 0),
-        penaltyPaid: Number((penaltyPaid ?? data.penaltyPaid) || 0),
-        justification: justification || "",
+        amount: isExempt ? 0 : Number(amount || 0),
+        penaltyPaid: isExempt ? 0 : Number((penaltyPaid ?? data.penaltyPaid) || 0),
+        justification: isExempt ? "" : (justification || ""),
       });
     };
 
@@ -2979,9 +3010,9 @@
         const amountInput = row.querySelector("[data-payment-group-amount]");
         const justificationInput = row.querySelector("[data-payment-group-justification]");
         const penaltyInput = row.querySelector("[data-payment-group-penalty]");
-        const amount = Number(amountInput?.value || 0);
+        const amount = isExempt ? 0 : Number(amountInput?.value || 0);
         const justification = String(justificationInput?.value || "").trim();
-        if (amount !== expectedAmount && !justification) {
+        if (!isExempt && amount !== expectedAmount && !justification) {
           throw new Error(`Justifique o valor diferente de ${money(expectedAmount)} para ${driverName(getDriver(driverId))}.`);
         }
         pushPayment({
@@ -3002,9 +3033,9 @@
     if (!data.driverId || !vehicleId) {
       throw new Error("Escolha um motorista com viatura atribuída.");
     }
-    const amount = Number(data.amount || 0);
+    const amount = isExempt ? 0 : Number(data.amount || 0);
     const justification = String(data.justification || "").trim();
-    if (amount !== expectedAmount && !justification) {
+    if (!isExempt && amount !== expectedAmount && !justification) {
       throw new Error(`Justifique o valor diferente de ${money(expectedAmount)}.`);
     }
     pushPayment({
