@@ -1021,6 +1021,11 @@ a {
   background: var(--danger-soft);
 }
 
+.badge.info {
+  color: #0d5c75;
+  background: #e1f5fe;
+}
+
 .badge.file-badge {
   color: #202020;
   background: var(--accent);

@@ -454,10 +454,61 @@
     return { label: "Válido", severity: "ok" };
   }
 
+  function getVehicleExemptionReason(vehicle, dateTarget = new Date()) {
+    if (!vehicle) return null;
+    const driverId = vehicle.driverId;
+
+    if (vehicle.status === "imobilizado") {
+      return { reason: "Viatura imobilizada", type: "imobilizado" };
+    }
+    if (vehicle.status === "manutencao") {
+      return { reason: "Viatura em manutenção", type: "manutencao" };
+    }
+
+    const targetDate = new Date(dateTarget);
+    const targetMonday = mondayOf(targetDate).getTime();
+    const targetNextMonday = targetMonday + 7 * 86400000;
+
+    const event = state.events.find((evt) => {
+      if (evt.vehicleId !== vehicle.id && (!driverId || evt.driverId !== driverId)) return false;
+      const isExemptType = evt.exemptFromFee || evt.immobilizeVehicle || ["doenca", "licenca", "manutencao", "paragem_tecnica", "sinistro", "avaria"].includes(evt.type);
+      if (!isExemptType) return false;
+
+      const start = new Date(evt.startDate || evt.date).getTime();
+      const end = evt.endDate ? new Date(evt.endDate).getTime() : (evt.status !== "resolvido" ? Infinity : start + 86400000);
+
+      return start < targetNextMonday && end >= targetMonday;
+    });
+
+    if (event) {
+      const labels = {
+        doenca: "Doença / Baixa médica",
+        licenca: "Licença / Férias",
+        manutencao: "Manutenção em oficina",
+        paragem_tecnica: "Paragem técnica autorizada",
+        sinistro: "Sinistro / Acidente",
+        avaria: "Avaria mecânica",
+      };
+      const typeLabel = labels[event.type] || "Paragem autorizada";
+      const endStr = event.endDate ? ` até ${dateLabel(event.endDate)}` : "";
+      return { reason: `${typeLabel}${endStr}`, type: event.type, event };
+    }
+
+    return null;
+  }
+
+  function isVehicleExempt(vehicle, dateTarget = new Date()) {
+    return Boolean(getVehicleExemptionReason(vehicle, dateTarget));
+  }
+
   function calcSummary() {
     const weekPayments = currentWeekPayments();
     const assigned = assignedVehicles();
-    const expected = assigned.length * state.settings.weeklyFee;
+
+    const workingVehicles = assigned.filter((vehicle) => !isVehicleExempt(vehicle));
+    const exemptVehicles = assigned.filter((vehicle) => isVehicleExempt(vehicle));
+
+    const expected = workingVehicles.length * state.settings.weeklyFee;
     const collected = weekPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
     const penalties = weekPayments.reduce((sum, payment) => sum + paymentPenalty(payment).amount, 0);
     const monthPayments = currentMonthItems(state.payments, "paidAt");
@@ -467,13 +518,13 @@
     const monthCollected = monthPayments.reduce((sum, payment) => sum + Number(payment.amount || 0) + Number(payment.penaltyPaid || 0), 0);
     const net = monthCollected - monthExpensesOwner;
 
-    const pendingVehicles = assigned.filter((vehicle) => {
+    const pendingVehicles = workingVehicles.filter((vehicle) => {
       return !weekPayments.some((payment) => payment.vehicleId === vehicle.id || payment.driverId === vehicle.driverId);
     });
 
     const overdue = pendingVehicles.length;
     const alerts = buildAlerts();
-    return { expected, collected, penalties, monthExpensesOwner, monthCollected, net, overdue, alerts, pendingVehicles };
+    return { expected, collected, penalties, monthExpensesOwner, monthCollected, net, overdue, alerts, pendingVehicles, workingVehicles, exemptVehicles };
   }
 
   function calcPeriodSummary(kind) {
@@ -491,19 +542,33 @@
     const alerts = [];
     const due = dueDateTime(new Date());
     const isPastDue = new Date() > due;
+    const weekPayments = currentWeekPayments();
 
     assignedVehicles().forEach((vehicle) => {
       const driver = getDriver(vehicle.driverId);
-      const paid = currentWeekPayments().some((payment) => payment.vehicleId === vehicle.id || payment.driverId === vehicle.driverId);
-      if (!paid) {
+      const exemption = getVehicleExemptionReason(vehicle);
+
+      if (exemption) {
         alerts.push({
-          type: isPastDue ? "danger" : "warn",
-          icon: "clock",
-          title: `Entrega pendente: ${driverName(driver)}`,
-          text: `${vehicleName(vehicle)} · Faltam ${money(state.settings.weeklyFee)}${isPastDue ? " (Fora do prazo!)" : ""}`,
-          actionRoute: "registar",
+          type: "info",
+          icon: "info",
+          title: `Em paragem: ${driverName(driver)}`,
+          text: `${vehicleName(vehicle)} · ${exemption.reason} (Isento de entrega nesta semana)`,
+          actionRoute: "motorista",
           driverId: vehicle.driverId,
         });
+      } else {
+        const paid = weekPayments.some((payment) => payment.vehicleId === vehicle.id || payment.driverId === vehicle.driverId);
+        if (!paid) {
+          alerts.push({
+            type: isPastDue ? "danger" : "warn",
+            icon: "clock",
+            title: `Entrega pendente: ${driverName(driver)}`,
+            text: `${vehicleName(vehicle)} · Faltam ${money(state.settings.weeklyFee)}${isPastDue ? " (Fora do prazo!)" : ""}`,
+            actionRoute: "registar",
+            driverId: vehicle.driverId,
+          });
+        }
       }
     });
 
@@ -531,18 +596,7 @@
       }
     });
 
-    state.vehicles
-      .filter((vehicle) => vehicle.status === "imobilizado" || vehicle.status === "manutencao")
-      .forEach((vehicle) => {
-        alerts.push({
-          type: "danger",
-          icon: "wrench",
-          title: vehicle.status === "imobilizado" ? "Viatura imobilizada" : "Viatura em manutenção",
-          text: `${vehicleName(vehicle)} não deve ser atribuída nem considerada disponível.`,
-        });
-      });
-
-    return alerts.slice(0, 10);
+    return alerts.slice(0, 12);
   }
 
   function setRoute(input) {
@@ -910,16 +964,21 @@
       <form class="panel pad form-grid" data-form="event">
         ${selectField("vehicleId", "Viatura", vehicleOptions(true), state.vehicles[0]?.id || "")}
         ${selectField("driverId", "Motorista", driverOptions(true), state.drivers[0]?.id || "")}
-        ${inputField("date", "Data e hora", "datetime-local", toLocalInput())}
-        ${selectField("type", "Tipo", [
-          ["sinistro", "Acidente/sinistro"],
-          ["avaria", "Avaria"],
-          ["multa", "Multa"],
+        ${inputField("startDate", "Data / Início", "datetime-local", toLocalInput())}
+        ${inputField("endDate", "Término (opcional para paragens)", "datetime-local", "")}
+        ${selectField("type", "Tipo de ocorrência", [
+          ["doenca", "Doença / Baixa médica"],
+          ["licenca", "Licença / Férias"],
+          ["manutencao", "Manutenção em oficina"],
+          ["paragem_tecnica", "Paragem técnica autorizada"],
+          ["sinistro", "Acidente / Sinistro"],
+          ["avaria", "Avaria mecânica"],
+          ["multa", "Multa / Coima"],
           ["fora_horario", "Fora de horário"],
           ["vistoria", "Vistoria"],
-          ["gps", "GPS/manipulação"],
-          ["furto", "Furto/roubo"],
-          ["outro", "Outro"],
+          ["gps", "GPS / Manipulação"],
+          ["furto", "Furto / Roubo"],
+          ["outro", "Outro motivo"],
         ])}
         ${inputField("amount", "Valor associado", "number", "", "min='0' step='1000'")}
         ${selectField("status", "Estado", [
@@ -927,15 +986,16 @@
           ["resolvido", "Resolvido"],
         ])}
         <div class="field span-3" data-event-impact>
-          <label>Impacto operacional</label>
+          <label>Impacto operacional e financeiro</label>
           <div class="check-grid">
+            ${checkboxField("exemptFromFee", "Isentar entrega contratual neste período (sem cobrança)", true)}
             ${checkboxField("immobilizeVehicle", "Imobilizar viatura", false)}
             ${checkboxField("releaseAssignment", "Libertar motorista/atribuição", false)}
           </div>
         </div>
         <div class="field span-3">
-          <label for="eventNotes">Descrição</label>
-          <textarea id="eventNotes" name="notes" placeholder="O que aconteceu, quem foi avisado e próximos passos."></textarea>
+          <label for="eventNotes">Descrição / Justificação</label>
+          <textarea id="eventNotes" name="notes" placeholder="Detalhes sobre a paragem, baixa médica ou ocorrência."></textarea>
         </div>
         <button class="button full span-3" type="submit">${icon("save")}Guardar ocorrência</button>
       </form>
@@ -2863,15 +2923,20 @@
   function addEvent(data) {
     const amount = data.type === "fora_horario" && !data.amount ? state.settings.fineOffHours : Number(data.amount || 0);
     const now = new Date().toISOString();
+    const startDate = data.startDate ? new Date(data.startDate).toISOString() : (data.date ? new Date(data.date).toISOString() : now);
+    const endDate = data.endDate ? new Date(data.endDate).toISOString() : "";
     state.events.push({
       id: uid(),
       vehicleId: data.vehicleId,
       driverId: data.driverId,
-      date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+      date: startDate,
+      startDate,
+      endDate,
       type: data.type,
       amount,
       status: data.status,
       immobilizeVehicle: Boolean(data.immobilizeVehicle),
+      exemptFromFee: Boolean(data.exemptFromFee),
       releaseAssignment: Boolean(data.releaseAssignment),
       notes: data.notes,
       createdAt: now,
@@ -2890,7 +2955,7 @@
       }
     }
     persist();
-    toast(data.immobilizeVehicle ? "Ocorrência guardada e viatura imobilizada." : "Ocorrência guardada.");
+    toast(data.immobilizeVehicle ? "Ocorrência guardada e viatura imobilizada." : (data.exemptFromFee ? "Ocorrência guardada com isenção de entrega." : "Ocorrência guardada."));
   }
 
   async function addDocument(data) {
