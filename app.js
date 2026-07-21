@@ -768,13 +768,41 @@
     const assigned = state.drivers.filter((driver) => activeAssignmentForDriver(driver.id));
     const initialDriverId = assigned[0]?.id || "";
     const initialVehicle = getVehicle(activeAssignmentForDriver(initialDriverId)?.vehicleId);
+    const groupRows = assigned.map((driver) => paymentGroupRow(driver)).join("") || empty("Nenhum motorista com viatura atribuída.");
     return `
       <form class="panel pad form-grid" data-form="payment">
-        ${selectField("driverId", "Motorista", driverOptions(true, { assignedOnly: true }), initialDriverId, "data-payment-driver class='span-2'")}
-        ${inputField("vehicleLabel", "Viatura associada", "text", vehicleName(initialVehicle), "readonly data-payment-vehicle-label")}
-        <input type="hidden" name="vehicleId" value="${h(initialVehicle?.id || "")}" data-payment-vehicle />
-        ${inputField("amount", "Valor entregue", "number", state.settings.weeklyFee, "min='0' step='1000'")}
-        ${inputField("penaltyPaid", "Penalidade paga", "number", 0, "min='0' step='1000'")}
+        <div class="field span-3">
+          <label>Modo de entrega</label>
+          <div class="segmented" data-payment-mode-group>
+            <label class="segmented-option">
+              <input type="radio" name="paymentMode" value="single" checked data-payment-mode />
+              <span>Individual</span>
+            </label>
+            <label class="segmented-option">
+              <input type="radio" name="paymentMode" value="group" data-payment-mode />
+              <span>Em grupo</span>
+            </label>
+          </div>
+        </div>
+        <div class="payment-mode-section span-3" data-payment-single>
+          ${selectField("driverId", "Motorista", driverOptions(true, { assignedOnly: true }), initialDriverId, "data-payment-driver class='span-2'")}
+          ${inputField("vehicleLabel", "Viatura associada", "text", vehicleName(initialVehicle), "readonly data-payment-vehicle-label")}
+          <input type="hidden" name="vehicleId" value="${h(initialVehicle?.id || "")}" data-payment-vehicle />
+          ${inputField("amount", "Valor entregue", "number", state.settings.weeklyFee, "min='0' step='1000' data-payment-amount")}
+          ${inputField("penaltyPaid", "Penalidade paga", "number", 0, "min='0' step='1000'")}
+          <div class="field span-3" data-payment-justification-wrap hidden>
+            <label for="paymentJustification">Justificação</label>
+            <textarea id="paymentJustification" name="justification" data-payment-justification placeholder="Obrigatória quando o valor for diferente do normal."></textarea>
+          </div>
+        </div>
+        <div class="payment-mode-section span-3" data-payment-group hidden>
+          <div class="field span-3 payment-group-help">
+            <small class="muted">Selecione um ou mais motoristas. Cada linha pode ter valor próprio; se o valor não for ${money(state.settings.weeklyFee)}, a justificação passa a ser obrigatória.</small>
+          </div>
+          <div class="payment-group-list" data-payment-group-list>
+            ${groupRows}
+          </div>
+        </div>
         ${inputField("dueAt", "Vencimento", "datetime-local", toLocalInput(due))}
         ${inputField("paidAt", "Recebido em", "datetime-local", toLocalInput())}
         ${inputField("proof", "Comprovativo", "text", "", "placeholder='Transferência, talão ou referência' class='span-2'")}
@@ -785,6 +813,32 @@
         </div>
         <button class="button full span-3" type="submit">${icon("save")}Guardar entrega</button>
       </form>
+    `;
+  }
+
+  function paymentGroupRow(driver) {
+    const assignment = activeAssignmentForDriver(driver.id);
+    const vehicle = getVehicle(assignment?.vehicleId);
+    const amount = Number(assignment?.weeklyFee || state.settings.weeklyFee || 0);
+    const rowId = `payment-group-${driver.id}-${Math.random().toString(16).slice(2)}`;
+    return `
+      <div class="payment-group-row" data-payment-group-row data-driver-id="${h(driver.id)}">
+        <label class="check-item payment-group-check" for="${rowId}">
+          <input id="${rowId}" type="checkbox" data-payment-group-check />
+          <span>
+            <strong>${h(driverName(driver))}</strong>
+            <small>${h(vehicleName(vehicle))} · ${money(amount)}</small>
+          </span>
+        </label>
+        <div class="payment-group-fields" data-payment-group-fields hidden>
+          ${inputField(`groupAmount_${driver.id}`, "Valor entregue", "number", amount, "min='0' step='1000' data-payment-group-amount")}
+          ${inputField(`groupPenalty_${driver.id}`, "Penalidade paga", "number", 0, "min='0' step='1000' data-payment-group-penalty")}
+          <div class="field span-2" data-payment-group-justification-wrap hidden>
+            <label for="paymentGroupJustification-${driver.id}">Justificação</label>
+            <textarea id="paymentGroupJustification-${driver.id}" data-payment-group-justification placeholder="Obrigatória quando o valor for diferente do normal."></textarea>
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -2264,20 +2318,21 @@
     return `
       <article class="record">
         <div class="record-main">
-          <div class="record-title">
-            <strong>${money(payment.amount)}</strong>
-            <small>${h(driverName(getDriver(payment.driverId)))} · ${h(vehicleName(getVehicle(payment.vehicleId)))}</small>
-          </div>
-          ${compact ? "" : `<button class="icon-button" type="button" title="Remover" data-delete="payment" data-id="${h(payment.id)}">${icon("trash")}</button>`}
+        <div class="record-title">
+          <strong>${money(payment.amount)}</strong>
+          <small>${h(driverName(getDriver(payment.driverId)))} · ${h(vehicleName(getVehicle(payment.vehicleId)))}</small>
         </div>
-        <div class="badge-row">
-          <span class="badge ${penalty.severity}">${h(penalty.label)}</span>
-          <span class="badge">${icon("calendar")}${h(dateTimeLabel(payment.paidAt || payment.dueAt))}</span>
-          ${payment.proof ? `<span class="badge">${h(payment.proof)}</span>` : ""}
-          ${fileBadge(payment.files?.proof, "Comprovativo")}
-        </div>
-      </article>
-    `;
+        ${compact ? "" : `<button class="icon-button" type="button" title="Remover" data-delete="payment" data-id="${h(payment.id)}">${icon("trash")}</button>`}
+      </div>
+      <div class="badge-row">
+        <span class="badge ${penalty.severity}">${h(penalty.label)}</span>
+        <span class="badge">${icon("calendar")}${h(dateTimeLabel(payment.paidAt || payment.dueAt))}</span>
+        ${payment.justification ? `<span class="badge">${icon("file")}${h(payment.justification)}</span>` : ""}
+        ${payment.proof ? `<span class="badge">${h(payment.proof)}</span>` : ""}
+        ${fileBadge(payment.files?.proof, "Comprovativo")}
+      </div>
+    </article>
+  `;
   }
 
   function expenseRecord(expense) {
@@ -2670,18 +2725,11 @@
     return Object.fromEntries(new FormData(form).entries());
   }
 
-  async function addPayment(data) {
-    const assignment = activeAssignmentForDriver(data.driverId);
-    const vehicleId = data.vehicleId || assignment?.vehicleId || "";
-    if (!data.driverId || !vehicleId) {
-      throw new Error("Escolha um motorista com viatura atribuída.");
-    }
+  async function addPayment(data, form) {
     const proofFile = await uploadFile(selectedFile(data, "proofFile"), "entrega-comprovativo");
-    state.payments.push({
-      id: uid(),
-      vehicleId,
-      driverId: data.driverId,
-      amount: Number(data.amount || 0),
+    const mode = data.paymentMode || "single";
+    const expectedAmount = Number(state.settings.weeklyFee || 0);
+    const baseRecord = {
       penaltyPaid: Number(data.penaltyPaid || 0),
       dueAt: data.dueAt ? new Date(data.dueAt).toISOString() : dueDateTime().toISOString(),
       paidAt: data.paidAt ? new Date(data.paidAt).toISOString() : "",
@@ -2691,6 +2739,70 @@
       },
       notes: data.notes,
       createdAt: new Date().toISOString(),
+    };
+
+    const pushPayment = ({ driverId, vehicleId, amount, penaltyPaid, justification }) => {
+      state.payments.push({
+        ...baseRecord,
+        id: uid(),
+        vehicleId,
+        driverId,
+        amount: Number(amount || 0),
+        penaltyPaid: Number((penaltyPaid ?? data.penaltyPaid) || 0),
+        justification: justification || "",
+      });
+    };
+
+    if (mode === "group") {
+      const rows = [...(form?.querySelectorAll("[data-payment-group-row]") || [])]
+        .filter((row) => row.querySelector("[data-payment-group-check]")?.checked);
+      if (!rows.length) {
+        throw new Error("Selecione pelo menos um motorista para a entrega em grupo.");
+      }
+      rows.forEach((row) => {
+        const driverId = row.dataset.driverId;
+        const assignment = activeAssignmentForDriver(driverId);
+        const vehicleId = assignment?.vehicleId || "";
+        if (!driverId || !vehicleId) {
+          throw new Error("Selecione apenas motoristas com viatura atribuída.");
+        }
+        const amountInput = row.querySelector("[data-payment-group-amount]");
+        const justificationInput = row.querySelector("[data-payment-group-justification]");
+        const penaltyInput = row.querySelector("[data-payment-group-penalty]");
+        const amount = Number(amountInput?.value || 0);
+        const justification = String(justificationInput?.value || "").trim();
+        if (amount !== expectedAmount && !justification) {
+          throw new Error(`Justifique o valor diferente de ${money(expectedAmount)} para ${driverName(getDriver(driverId))}.`);
+        }
+        pushPayment({
+          driverId,
+          vehicleId,
+          amount,
+          penaltyPaid: Number(penaltyInput?.value || data.penaltyPaid || 0),
+          justification,
+        });
+      });
+      persist();
+      toast(`Entrega em grupo guardada para ${rows.length} motorista${rows.length === 1 ? "" : "s"}.`);
+      return;
+    }
+
+    const assignment = activeAssignmentForDriver(data.driverId);
+    const vehicleId = data.vehicleId || assignment?.vehicleId || "";
+    if (!data.driverId || !vehicleId) {
+      throw new Error("Escolha um motorista com viatura atribuída.");
+    }
+    const amount = Number(data.amount || 0);
+    const justification = String(data.justification || "").trim();
+    if (amount !== expectedAmount && !justification) {
+      throw new Error(`Justifique o valor diferente de ${money(expectedAmount)}.`);
+    }
+    pushPayment({
+      driverId: data.driverId,
+      vehicleId,
+      amount,
+      penaltyPaid: Number(data.penaltyPaid || 0),
+      justification,
     });
     persist();
     toast("Entrega semanal guardada.");
@@ -3009,7 +3121,7 @@
         vehicle: vehicleName(getVehicle(payment.vehicleId)),
         driver: driverName(getDriver(payment.driverId)),
         amount: Number(payment.amount || 0) + Number(payment.penaltyPaid || 0),
-        notes: payment.notes || payment.proof || "",
+        notes: [payment.justification, payment.notes, payment.proof].filter(Boolean).join(" · "),
       })),
       ...expenses.map((expense) => ({
         date: dateLabel(expense.date),
@@ -3139,7 +3251,7 @@
       };
       try {
         if (submitButton) submitButton.disabled = true;
-        await handlers[form.dataset.form]?.(data);
+        await handlers[form.dataset.form]?.(data, form);
         render();
       } catch (error) {
         console.error(error);
@@ -3287,6 +3399,10 @@
         render();
       }
 
+      if (event.target.matches("[data-payment-mode]")) {
+        syncPaymentForm(event.target.form);
+      }
+
       if (event.target.matches("[data-payment-driver]")) {
         const assignment = activeAssignmentForDriver(event.target.value);
         const vehicle = getVehicle(assignment?.vehicleId);
@@ -3294,6 +3410,24 @@
         const vehicleLabel = event.target.form?.querySelector("[data-payment-vehicle-label]");
         if (vehicleInput) vehicleInput.value = vehicle?.id || "";
         if (vehicleLabel) vehicleLabel.value = vehicleName(vehicle);
+        syncPaymentJustification(event.target.form?.querySelector("[data-payment-single]"));
+      }
+
+      if (event.target.matches("[data-payment-amount]")) {
+        syncPaymentJustification(event.target.closest("[data-payment-single]"));
+      }
+
+      if (event.target.matches("[data-payment-group-check]")) {
+        const row = event.target.closest("[data-payment-group-row]");
+        if (row) {
+          const fields = row.querySelector("[data-payment-group-fields]");
+          if (fields) fields.hidden = !event.target.checked;
+          syncPaymentJustification(row);
+        }
+      }
+
+      if (event.target.matches("[data-payment-group-amount]")) {
+        syncPaymentJustification(event.target.closest("[data-payment-group-row]"));
       }
 
       if (event.target.matches("[data-expense-scope]")) {
@@ -3327,6 +3461,12 @@
       if (event.target.matches("[data-combo-search]")) {
         filterComboOptions(event.target.closest("[data-combo]"), event.target.value);
       }
+      if (event.target.matches("[data-payment-amount]")) {
+        syncPaymentJustification(event.target.closest("[data-payment-single]"));
+      }
+      if (event.target.matches("[data-payment-group-amount]")) {
+        syncPaymentJustification(event.target.closest("[data-payment-group-row]"));
+      }
     });
   }
 
@@ -3346,6 +3486,36 @@
       const label = String(option.dataset.label || option.textContent || "").toLowerCase();
       option.hidden = query && !label.includes(query);
     });
+  }
+
+  function syncPaymentForm(form) {
+    if (!form) return;
+    const mode = form.querySelector("[data-payment-mode]:checked")?.value || "single";
+    const single = form.querySelector("[data-payment-single]");
+    const group = form.querySelector("[data-payment-group]");
+    if (single) single.hidden = mode !== "single";
+    if (group) group.hidden = mode !== "group";
+    syncPaymentJustification(single);
+    form.querySelectorAll("[data-payment-group-row]").forEach((row) => {
+      const fields = row.querySelector("[data-payment-group-fields]");
+      const selected = row.querySelector("[data-payment-group-check]")?.checked;
+      if (fields) fields.hidden = !selected || mode !== "group";
+      syncPaymentJustification(row);
+    });
+  }
+
+  function syncPaymentJustification(scope) {
+    if (!scope) return;
+    const expectedAmount = Number(state.settings.weeklyFee || 0);
+    const amountInput = scope.querySelector("[data-payment-amount], [data-payment-group-amount]");
+    const justificationWrap = scope.querySelector("[data-payment-justification-wrap], [data-payment-group-justification-wrap]");
+    const justificationInput = scope.querySelector("[data-payment-justification], [data-payment-group-justification]");
+    if (!amountInput || !justificationWrap || !justificationInput) return;
+    const amount = Number(amountInput.value || 0);
+    const needsJustification = amount !== expectedAmount;
+    justificationWrap.hidden = !needsJustification;
+    justificationInput.required = needsJustification;
+    if (!needsJustification) justificationInput.value = "";
   }
 
   async function importBackup(file) {
