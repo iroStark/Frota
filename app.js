@@ -475,7 +475,18 @@
       if (!isExemptType) return false;
 
       const start = new Date(evt.startDate || evt.date).getTime();
-      const end = evt.endDate ? new Date(evt.endDate).getTime() : (evt.status !== "resolvido" ? Infinity : start + 86400000);
+      let end = Infinity;
+      if (evt.endDate) {
+        if (evt.endDate.length <= 10) {
+          const d = new Date(evt.endDate);
+          d.setHours(23, 59, 59, 999);
+          end = d.getTime();
+        } else {
+          end = new Date(evt.endDate).getTime();
+        }
+      } else if (evt.status === "resolvido") {
+        end = start + 86400000;
+      }
 
       return start < targetNextMonday && end >= targetMonday;
     });
@@ -785,8 +796,8 @@
       .filter((row) => row.lateCount > 0)
       .sort((a, b) => b.lateCount - a.lateCount)
       .slice(0, 4);
-    const recentPayments = [...state.payments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
-    const recentEvents = [...state.events].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    const recentPayments = [...state.payments].sort((a, b) => new Date(itemEffectiveDate(b, "paidAt")) - new Date(itemEffectiveDate(a, "paidAt"))).slice(0, 5);
+    const recentEvents = [...state.events].sort((a, b) => new Date(itemEffectiveDate(b, "date")) - new Date(itemEffectiveDate(a, "date"))).slice(0, 5);
     const progress = summary.expected ? Math.min(100, Math.round((summary.collected / summary.expected) * 100)) : 0;
 
     return `
@@ -920,10 +931,10 @@
     };
     const meta = labels[activeRegisterTab];
     const lists = {
-      pagamento: () => [...state.payments].reverse().map((payment) => paymentRecord(payment)).join(""),
-      despesa: () => [...state.expenses].reverse().map((expense) => expenseRecord(expense)).join(""),
-      ocorrencia: () => [...state.events].reverse().map((event) => eventRecord(event)).join(""),
-      documento: () => [...state.documents].reverse().map((doc) => documentRecord(doc)).join(""),
+      pagamento: () => [...state.payments].sort((a, b) => new Date(itemEffectiveDate(b, "paidAt")) - new Date(itemEffectiveDate(a, "paidAt"))).map((payment) => paymentRecord(payment)).join(""),
+      despesa: () => [...state.expenses].sort((a, b) => new Date(itemEffectiveDate(b, "date")) - new Date(itemEffectiveDate(a, "date"))).map((expense) => expenseRecord(expense)).join(""),
+      ocorrencia: () => [...state.events].sort((a, b) => new Date(itemEffectiveDate(b, "date")) - new Date(itemEffectiveDate(a, "date"))).map((event) => eventRecord(event)).join(""),
+      documento: () => [...state.documents].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((doc) => documentRecord(doc)).join(""),
     };
     const listHtml = lists[activeRegisterTab]() || empty(meta.empty);
     return `
