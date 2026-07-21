@@ -397,6 +397,32 @@
     return list.filter((item) => monthValue(new Date(item[field] || item.createdAt)) === activeReportMonth);
   }
 
+  function periodRange(kind) {
+    const now = new Date();
+    if (kind === "semana") {
+      const start = mondayOf(now);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 7);
+      return { start, end, label: "Semana" };
+    }
+    if (kind === "mes") {
+      return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 1), label: "Mês" };
+    }
+    if (kind === "ano") {
+      return { start: new Date(now.getFullYear(), 0, 1), end: new Date(now.getFullYear() + 1, 0, 1), label: "Ano" };
+    }
+    return { start: null, end: null, label: "Geral" };
+  }
+
+  function filterByPeriod(list, field, kind) {
+    const { start, end } = periodRange(kind);
+    if (!start || !end) return list;
+    return list.filter((item) => {
+      const date = new Date(item[field] || item.createdAt);
+      return date >= start && date < end;
+    });
+  }
+
   function paymentPenalty(payment, atDate = new Date()) {
     const due = new Date(payment.dueAt);
     const paid = payment.paidAt ? new Date(payment.paidAt) : atDate;
@@ -439,6 +465,17 @@
     return { expected, collected, penalties, monthExpensesOwner, monthCollected, net, overdue, alerts };
   }
 
+  function calcPeriodSummary(kind) {
+    const payments = filterByPeriod(state.payments, "paidAt", kind);
+    const expenses = filterByPeriod(state.expenses, "date", kind);
+    const events = filterByPeriod(state.events, "date", kind);
+    const received = payments.reduce((sum, payment) => sum + Number(payment.amount || 0) + Number(payment.penaltyPaid || 0), 0);
+    const ownerCosts = expenses.filter((expense) => expense.responsible === "proprietaria").reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    const driverCosts = expenses.filter((expense) => expense.responsible === "motorista").reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    const lateCount = payments.filter((payment) => paymentPenalty(payment).delayHours > 0).length;
+    return { ...periodRange(kind), payments, expenses, events, received, ownerCosts, driverCosts, net: received - ownerCosts, lateCount };
+  }
+
   function buildAlerts() {
     const alerts = [];
     const due = dueDateTime(new Date());
@@ -479,6 +516,17 @@
         });
       }
     });
+
+    state.vehicles
+      .filter((vehicle) => vehicle.status === "imobilizado" || vehicle.status === "manutencao")
+      .forEach((vehicle) => {
+        alerts.push({
+          type: "danger",
+          icon: "wrench",
+          title: vehicle.status === "imobilizado" ? "Viatura imobilizada" : "Viatura em manutenção",
+          text: `${vehicleName(vehicle)} não deve ser atribuída nem considerada disponível.`,
+        });
+      });
 
     return alerts.slice(0, 8);
   }
@@ -553,6 +601,11 @@
   function renderDashboard() {
     const summary = calcSummary();
     const vehicles = state.vehicles.filter((vehicle) => vehicle.status === "ativo");
+    const periodSummaries = ["semana", "mes", "ano", "geral"].map(calcPeriodSummary);
+    const lateDrivers = aggregateByDriver(state.payments, state.expenses, state.events)
+      .filter((row) => row.lateCount > 0)
+      .sort((a, b) => b.lateCount - a.lateCount)
+      .slice(0, 4);
     const recentPayments = [...state.payments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
     const recentEvents = [...state.events].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
     const progress = summary.expected ? Math.min(100, Math.round((summary.collected / summary.expected) * 100)) : 0;
@@ -596,6 +649,22 @@
         </div>
       </section>
 
+      <section class="section-band">
+        <div class="section-title">
+          <h2>Controlo por período</h2>
+          <small>Semana, mês, ano e geral</small>
+        </div>
+        <div class="kpi-strip">
+          ${periodSummaries.map((item) => `
+            <div class="kpi">
+              <span>${h(item.label)}</span>
+              <strong>${money(item.net)}</strong>
+              <small class="muted">${money(item.received)} recebido · ${money(item.ownerCosts)} despesas · ${item.events.length} ocorrências</small>
+            </div>
+          `).join("")}
+        </div>
+      </section>
+
       <section class="section-band grid-2">
         <div>
           <div class="section-title">
@@ -620,13 +689,36 @@
 
         <div>
           <div class="section-title">
-            <h2>Últimos registos</h2>
-            <a class="button secondary" href="#registar">${icon("plus")}Novo</a>
+            <h2>Motoristas com mais atrasos</h2>
+            <a class="button secondary" href="#relatorios">${icon("chart")}Relatórios</a>
           </div>
-          <div class="stack">
-            ${recentPayments.length ? recentPayments.map((payment) => paymentRecord(payment, true)).join("") : empty("Ainda não há entregas registadas.")}
-            ${recentEvents.length ? recentEvents.map((event) => eventRecord(event, true)).join("") : ""}
+          <div class="record-list">
+            ${lateDrivers.length ? lateDrivers.map((row) => `
+              <article class="record clickable" data-nav="motorista" data-nav-id="${h(row.id)}">
+                <div class="record-main">
+                  <div class="record-lead">
+                    ${driverAvatarHtml(row.driver, "sm")}
+                    <div class="record-title">
+                      <strong>${h(row.name)}</strong>
+                      <small>${h(row.vehicleName)} · ${row.payments} entrega(s)</small>
+                    </div>
+                  </div>
+                  <span class="badge danger">${row.lateCount} atraso(s)</span>
+                </div>
+              </article>
+            `).join("") : empty("Nenhum atraso registado até agora.")}
           </div>
+        </div>
+      </section>
+
+      <section class="section-band">
+        <div class="section-title">
+          <h2>Últimos registos</h2>
+          <a class="button secondary" href="#registar">${icon("plus")}Novo</a>
+        </div>
+        <div class="stack">
+          ${recentPayments.length ? recentPayments.map((payment) => paymentRecord(payment, true)).join("") : empty("Ainda não há entregas registadas.")}
+          ${recentEvents.length ? recentEvents.map((event) => eventRecord(event, true)).join("") : ""}
         </div>
       </section>
     `;
@@ -673,15 +765,20 @@
 
   function paymentForm() {
     const due = dueDateTime();
+    const assigned = state.drivers.filter((driver) => activeAssignmentForDriver(driver.id));
+    const initialDriverId = assigned[0]?.id || "";
+    const initialVehicle = getVehicle(activeAssignmentForDriver(initialDriverId)?.vehicleId);
     return `
       <form class="panel pad form-grid" data-form="payment">
-        ${selectField("vehicleId", "Viatura", vehicleOptions(), assignedVehicles()[0]?.id || state.vehicles[0]?.id || "", "data-payment-vehicle")}
-        ${selectField("driverId", "Motorista", driverOptions(true), assignedVehicles()[0]?.driverId || "", "data-payment-driver")}
+        ${selectField("driverId", "Motorista", driverOptions(true, { assignedOnly: true }), initialDriverId, "data-payment-driver class='span-2'")}
+        ${inputField("vehicleLabel", "Viatura associada", "text", vehicleName(initialVehicle), "readonly data-payment-vehicle-label")}
+        <input type="hidden" name="vehicleId" value="${h(initialVehicle?.id || "")}" data-payment-vehicle />
         ${inputField("amount", "Valor entregue", "number", state.settings.weeklyFee, "min='0' step='1000'")}
         ${inputField("penaltyPaid", "Penalidade paga", "number", 0, "min='0' step='1000'")}
         ${inputField("dueAt", "Vencimento", "datetime-local", toLocalInput(due))}
         ${inputField("paidAt", "Recebido em", "datetime-local", toLocalInput())}
         ${inputField("proof", "Comprovativo", "text", "", "placeholder='Transferência, talão ou referência' class='span-2'")}
+        ${fileField("proofFile", "Upload do comprovativo", "accept='image/*,application/pdf'")}
         <div class="field span-3">
           <label for="paymentNotes">Notas</label>
           <textarea id="paymentNotes" name="notes" placeholder="Observações sobre atraso, comprovativo ou acordo."></textarea>
@@ -694,15 +791,21 @@
   function expenseForm() {
     return `
       <form class="panel pad form-grid" data-form="expense">
-        ${selectField("vehicleId", "Viatura", vehicleOptions(true), state.vehicles[0]?.id || "")}
+        ${selectField("vehicleScope", "Aplicar despesa a", [
+          ["single", "Uma viatura"],
+          ["all", "Todas as viaturas"],
+        ], "single", "data-expense-scope")}
+        ${selectField("vehicleId", "Viatura", vehicleOptions(true), state.vehicles[0]?.id || "", "data-expense-vehicle")}
         ${inputField("date", "Data", "date", toDateInput())}
-        ${selectField("category", "Categoria", [
+        ${selectField("category", "Grupo/Categoria", [
           ["combustivel", "Combustível"],
           ["lavagem", "Lavagem"],
           ["manutencao", "Manutenção"],
           ["pneu", "Pneu/alinhamento"],
           ["seguro", "Seguro/documento"],
           ["multa", "Multa/coima"],
+          ["operacional", "Operacional geral"],
+          ["documentacao", "Documentação"],
           ["outro", "Outro"],
         ])}
         ${selectField("responsible", "Responsável", [
@@ -741,6 +844,13 @@
           ["aberto", "Aberto"],
           ["resolvido", "Resolvido"],
         ])}
+        <div class="field span-3" data-event-impact>
+          <label>Impacto operacional</label>
+          <div class="check-grid">
+            ${checkboxField("immobilizeVehicle", "Imobilizar viatura", false)}
+            ${checkboxField("releaseAssignment", "Libertar motorista/atribuição", false)}
+          </div>
+        </div>
         <div class="field span-3">
           <label for="eventNotes">Descrição</label>
           <textarea id="eventNotes" name="notes" placeholder="O que aconteceu, quem foi avisado e próximos passos."></textarea>
@@ -823,7 +933,7 @@
         ${fileField("insuranceFile", isEdit && v.files?.insurancePolicy?.url ? "Substituir seguro" : "Upload seguro", "accept='image/*,application/pdf'")}
         ${fileField("inspectionFile", isEdit && v.files?.inspection?.url ? "Substituir inspeção" : "Upload inspeção", "accept='image/*,application/pdf' class='span-2'")}
         ${selectField("driverId", "Motorista atribuído", driverOptions(true), v.driverId ?? "", "class='span-2'")}
-        ${selectField("status", "Estado", [["ativo", "Ativo"], ["manutencao", "Manutenção"], ["parado", "Parado"]], v.status ?? "ativo")}
+        ${selectField("status", "Estado", [["ativo", "Ativo"], ["manutencao", "Manutenção"], ["imobilizado", "Imobilizado"], ["parado", "Parado"]], v.status ?? "ativo")}
         <button class="button full span-3" type="submit">${icon("save")}${isEdit ? "Atualizar viatura" : "Guardar viatura"}</button>
       </form>
     `;
@@ -895,10 +1005,12 @@
   }
 
   function assignmentForm() {
+    const availableVehicles = vehiclesAvailableForAssignment();
+    const availableDrivers = driversAvailableForAssignment();
     return `
       <form class="panel pad form-grid" data-form="assignment" data-modal-form="assignment">
-        ${selectField("vehicleId", "Viatura", vehicleOptions(true), state.vehicles.find((vehicle) => !vehicle.driverId)?.id || state.vehicles[0]?.id || "")}
-        ${selectField("driverId", "Motorista", driverOptions(true), state.drivers.find((driver) => !activeAssignmentForDriver(driver.id))?.id || state.drivers[0]?.id || "")}
+        ${selectField("vehicleId", "Viatura disponível", vehicleOptions(true, { availableOnly: true }), availableVehicles[0]?.id || "")}
+        ${selectField("driverId", "Motorista disponível", driverOptions(true, { availableOnly: true }), availableDrivers[0]?.id || "")}
         ${inputField("startAt", "Data de entrega", "datetime-local", toLocalInput())}
         ${inputField("weeklyFee", "Entrega semanal acordada", "number", state.settings.weeklyFee, "min='0' step='1000'")}
         ${inputField("depositReceived", "Caução recebida", "number", "", "min='0' step='1000'")}
@@ -1984,7 +2096,7 @@
         vehicle: vehicleName(getVehicle(expense.vehicleId)),
         driver: "",
         amount: Number(expense.amount || 0),
-        notes: expense.notes || expense.category || "",
+        notes: expense.notes || expenseCategoryLabel(expense.category) || "",
       })),
       ...events.map((event) => ({
         date: event.date,
@@ -2162,6 +2274,7 @@
           <span class="badge ${penalty.severity}">${h(penalty.label)}</span>
           <span class="badge">${icon("calendar")}${h(dateTimeLabel(payment.paidAt || payment.dueAt))}</span>
           ${payment.proof ? `<span class="badge">${h(payment.proof)}</span>` : ""}
+          ${fileBadge(payment.files?.proof, "Comprovativo")}
         </div>
       </article>
     `;
@@ -2173,13 +2286,14 @@
         <div class="record-main">
           <div class="record-title">
             <strong>${money(expense.amount)}</strong>
-            <small>${h(expense.category)} · ${h(vehicleName(getVehicle(expense.vehicleId)))}</small>
+            <small>${h(expenseCategoryLabel(expense.category))} · ${h(vehicleName(getVehicle(expense.vehicleId)))}</small>
           </div>
           <button class="icon-button" type="button" title="Remover" data-delete="expense" data-id="${h(expense.id)}">${icon("trash")}</button>
         </div>
         <div class="badge-row">
           <span class="badge ${expense.responsible === "proprietaria" ? "warn" : ""}">${h(expense.responsible === "proprietaria" ? "Proprietária" : "Motorista")}</span>
           <span class="badge">${h(dateLabel(expense.date))}</span>
+          ${expense.batchId ? `<span class="badge">${icon("car")}Despesa em lote</span>` : ""}
         </div>
       </article>
     `;
@@ -2199,6 +2313,8 @@
         <div class="badge-row">
           <span class="badge ${tone}">${h(event.status)}</span>
           ${event.amount ? `<span class="badge">${money(event.amount)}</span>` : ""}
+          ${event.immobilizeVehicle ? `<span class="badge danger">${icon("wrench")}Viatura imobilizada</span>` : ""}
+          ${event.releaseAssignment ? `<span class="badge warn">${icon("check")}Atribuição encerrada</span>` : ""}
           <span class="badge">${h(dateTimeLabel(event.date))}</span>
         </div>
       </article>
@@ -2241,6 +2357,21 @@
     return map[value] || value;
   }
 
+  function expenseCategoryLabel(value) {
+    const map = {
+      combustivel: "Combustível",
+      lavagem: "Lavagem",
+      manutencao: "Manutenção",
+      pneu: "Pneu/alinhamento",
+      seguro: "Seguro/documento",
+      multa: "Multa/coima",
+      operacional: "Operacional geral",
+      documentacao: "Documentação",
+      outro: "Outro",
+    };
+    return map[value] || value;
+  }
+
   function inputField(name, label, type, value = "", attrs = "") {
     const id = `${name}-${Math.random().toString(16).slice(2)}`;
     const classMatch = attrs.match(/class='([^']+)'/);
@@ -2259,12 +2390,24 @@
     const classMatch = attrs.match(/class='([^']+)'/);
     const className = classMatch ? classMatch[1] : "";
     const cleanedAttrs = attrs.replace(/class='[^']+'/g, "");
+    const selectedOption = options.find(([value]) => String(value) === String(selected)) || options[0] || ["", "Selecionar"];
     return `
       <div class="field ${h(className)}">
         <label for="${id}">${h(label)}</label>
-        <select id="${id}" name="${h(name)}" ${cleanedAttrs}>
-          ${options.map(([value, text]) => `<option value="${h(value)}" ${String(value) === String(selected) ? "selected" : ""}>${h(text)}</option>`).join("")}
-        </select>
+        <div class="combo" data-combo>
+          <input id="${id}" name="${h(name)}" type="hidden" value="${h(selectedOption[0])}" ${cleanedAttrs} />
+          <button class="combo-trigger" type="button" data-combo-trigger aria-haspopup="listbox" aria-expanded="false">
+            <span data-combo-label>${h(selectedOption[1])}</span>
+          </button>
+          <div class="combo-menu" data-combo-menu hidden>
+            <input class="combo-search" type="search" placeholder="Pesquisar..." autocomplete="off" data-combo-search />
+            <div class="combo-options" role="listbox">
+              ${options.map(([value, text]) => `
+                <button class="combo-option ${String(value) === String(selectedOption[0]) ? "selected" : ""}" type="button" role="option" data-combo-option data-value="${h(value)}" data-label="${h(text)}">${h(text)}</button>
+              `).join("")}
+            </div>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -2494,13 +2637,28 @@
     return `<a class="badge file-badge" href="${h(href)}" target="_blank" rel="noopener">${icon("file")}${h(label)}</a>`;
   }
 
-  function vehicleOptions(includeBlank = false) {
-    const options = state.vehicles.map((vehicle) => [vehicle.id, vehicleName(vehicle)]);
+  function vehiclesAvailableForAssignment() {
+    return state.vehicles.filter((vehicle) => (
+      !vehicle.driverId
+      && !activeAssignmentForVehicle(vehicle.id)
+      && !["imobilizado", "manutencao"].includes(vehicle.status)
+    ));
+  }
+
+  function driversAvailableForAssignment() {
+    return state.drivers.filter((driver) => !activeAssignmentForDriver(driver.id));
+  }
+
+  function vehicleOptions(includeBlank = false, filters = {}) {
+    const source = filters.availableOnly ? vehiclesAvailableForAssignment() : state.vehicles;
+    const options = source.map((vehicle) => [vehicle.id, vehicleName(vehicle)]);
     return includeBlank ? [["", "Sem viatura"], ...options] : options;
   }
 
-  function driverOptions(includeBlank = false) {
-    const options = state.drivers.map((driver) => [driver.id, driverName(driver)]);
+  function driverOptions(includeBlank = false, filters = {}) {
+    let source = filters.availableOnly ? driversAvailableForAssignment() : state.drivers;
+    if (filters.assignedOnly) source = source.filter((driver) => activeAssignmentForDriver(driver.id));
+    const options = source.map((driver) => [driver.id, driverName(driver)]);
     return includeBlank ? [["", "Sem motorista"], ...options] : options;
   }
 
@@ -2512,16 +2670,25 @@
     return Object.fromEntries(new FormData(form).entries());
   }
 
-  function addPayment(data) {
+  async function addPayment(data) {
+    const assignment = activeAssignmentForDriver(data.driverId);
+    const vehicleId = data.vehicleId || assignment?.vehicleId || "";
+    if (!data.driverId || !vehicleId) {
+      throw new Error("Escolha um motorista com viatura atribuída.");
+    }
+    const proofFile = await uploadFile(selectedFile(data, "proofFile"), "entrega-comprovativo");
     state.payments.push({
       id: uid(),
-      vehicleId: data.vehicleId,
-      driverId: data.driverId || getVehicle(data.vehicleId)?.driverId || "",
+      vehicleId,
+      driverId: data.driverId,
       amount: Number(data.amount || 0),
       penaltyPaid: Number(data.penaltyPaid || 0),
       dueAt: data.dueAt ? new Date(data.dueAt).toISOString() : dueDateTime().toISOString(),
       paidAt: data.paidAt ? new Date(data.paidAt).toISOString() : "",
       proof: data.proof,
+      files: {
+        proof: proofFile,
+      },
       notes: data.notes,
       createdAt: new Date().toISOString(),
     });
@@ -2530,9 +2697,17 @@
   }
 
   function addExpense(data) {
-    state.expenses.push({
+    const vehicles = data.vehicleScope === "all"
+      ? state.vehicles.filter((vehicle) => vehicle.status !== "imobilizado")
+      : [getVehicle(data.vehicleId)].filter(Boolean);
+    if (!vehicles.length) {
+      throw new Error("Escolha uma viatura válida para a despesa.");
+    }
+    const batchId = data.vehicleScope === "all" ? uid() : "";
+    vehicles.forEach((vehicle) => state.expenses.push({
       id: uid(),
-      vehicleId: data.vehicleId,
+      batchId,
+      vehicleId: vehicle.id,
       date: data.date || toDateInput(),
       category: data.category,
       responsible: data.responsible,
@@ -2540,13 +2715,14 @@
       paidTo: data.paidTo,
       notes: data.notes,
       createdAt: new Date().toISOString(),
-    });
+    }));
     persist();
-    toast("Despesa guardada.");
+    toast(vehicles.length > 1 ? `Despesa aplicada a ${vehicles.length} viaturas.` : "Despesa guardada.");
   }
 
   function addEvent(data) {
     const amount = data.type === "fora_horario" && !data.amount ? state.settings.fineOffHours : Number(data.amount || 0);
+    const now = new Date().toISOString();
     state.events.push({
       id: uid(),
       vehicleId: data.vehicleId,
@@ -2555,11 +2731,26 @@
       type: data.type,
       amount,
       status: data.status,
+      immobilizeVehicle: Boolean(data.immobilizeVehicle),
+      releaseAssignment: Boolean(data.releaseAssignment),
       notes: data.notes,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     });
+    if (data.vehicleId && data.immobilizeVehicle) {
+      const activeAssignment = activeAssignmentForVehicle(data.vehicleId);
+      state.vehicles = state.vehicles.map((vehicle) => (
+        vehicle.id === data.vehicleId
+          ? { ...vehicle, status: "imobilizado", driverId: data.releaseAssignment ? "" : vehicle.driverId }
+          : vehicle
+      ));
+      if (data.releaseAssignment && activeAssignment) {
+        state.assignments = state.assignments.map((assignment) => (
+          assignment.id === activeAssignment.id ? closeOpenAssignment(assignment, now, "sinistro") : assignment
+        ));
+      }
+    }
     persist();
-    toast("Ocorrência guardada.");
+    toast(data.immobilizeVehicle ? "Ocorrência guardada e viatura imobilizada." : "Ocorrência guardada.");
   }
 
   async function addDocument(data) {
@@ -2586,16 +2777,18 @@
     if (!vehicle || !driver) {
       throw new Error("Escolha uma viatura e um motorista válidos.");
     }
+    if (activeAssignmentForVehicle(vehicle.id) || vehicle.driverId) {
+      throw new Error("Esta viatura já está atribuída. Encerre a atribuição atual primeiro.");
+    }
+    if (activeAssignmentForDriver(driver.id)) {
+      throw new Error("Este motorista já tem uma viatura atribuída.");
+    }
+    if (["imobilizado", "manutencao"].includes(vehicle.status)) {
+      throw new Error("Esta viatura não está disponível para atribuição.");
+    }
 
     const startAt = data.startAt ? new Date(data.startAt).toISOString() : new Date().toISOString();
     const now = new Date().toISOString();
-
-    state.assignments = state.assignments.map((assignment) => {
-      if (assignment.status === "ativo" && (assignment.vehicleId === vehicle.id || assignment.driverId === driver.id)) {
-        return closeOpenAssignment(assignment, now, "substituida");
-      }
-      return assignment;
-    });
 
     state.vehicles = state.vehicles.map((item) => {
       if (item.id === vehicle.id) {
@@ -2824,7 +3017,7 @@
         vehicle: vehicleName(getVehicle(expense.vehicleId)),
         driver: "",
         amount: Number(expense.amount || 0),
-        notes: expense.notes || expense.category || "",
+        notes: expense.notes || expenseCategoryLabel(expense.category) || "",
       })),
       ...events.map((event) => ({
         date: dateLabel(event.date),
@@ -2887,7 +3080,7 @@
     openModalNode = dialog;
     if (dialog.showModal) dialog.showModal();
     else dialog.setAttribute("open", "");
-    const firstInput = dialog.querySelector("input, select, textarea, button");
+    const firstInput = dialog.querySelector("input:not([type='hidden']), textarea, button");
     if (firstInput) firstInput.focus({ preventScroll: true });
     return dialog;
   }
@@ -2957,6 +3150,44 @@
     });
 
     document.addEventListener("click", async (event) => {
+      const comboTrigger = event.target.closest("[data-combo-trigger]");
+      if (comboTrigger) {
+        const combo = comboTrigger.closest("[data-combo]");
+        const menu = combo?.querySelector("[data-combo-menu]");
+        const expanded = comboTrigger.getAttribute("aria-expanded") === "true";
+        closeCombos(combo);
+        if (menu && !expanded) {
+          menu.hidden = false;
+          comboTrigger.setAttribute("aria-expanded", "true");
+          const search = combo.querySelector("[data-combo-search]");
+          if (search) {
+            search.value = "";
+            filterComboOptions(combo, "");
+            search.focus();
+          }
+        }
+        return;
+      }
+
+      const comboOption = event.target.closest("[data-combo-option]");
+      if (comboOption) {
+        const combo = comboOption.closest("[data-combo]");
+        const hidden = combo?.querySelector("input[type='hidden']");
+        const label = combo?.querySelector("[data-combo-label]");
+        if (hidden && label) {
+          hidden.value = comboOption.dataset.value || "";
+          label.textContent = comboOption.dataset.label || comboOption.textContent.trim();
+          combo.querySelectorAll("[data-combo-option]").forEach((option) => {
+            option.classList.toggle("selected", option === comboOption);
+          });
+          hidden.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        closeCombos();
+        return;
+      }
+
+      if (!event.target.closest("[data-combo]")) closeCombos();
+
       const registerTab = event.target.closest("[data-register-tab]");
       if (registerTab) {
         activeRegisterTab = registerTab.dataset.registerTab;
@@ -3016,7 +3247,7 @@
       }
 
       const navTrigger = event.target.closest("[data-nav]");
-      if (navTrigger && !event.target.closest("button, a, input, select, textarea, [data-no-nav]")) {
+      if (navTrigger && !event.target.closest("button, a, input, select, textarea, [data-combo], [data-no-nav]")) {
         event.preventDefault();
         navigate(navTrigger.dataset.nav, navTrigger.dataset.navId || "");
         return;
@@ -3056,10 +3287,33 @@
         render();
       }
 
-      if (event.target.matches("[data-payment-vehicle]")) {
+      if (event.target.matches("[data-payment-driver]")) {
+        const assignment = activeAssignmentForDriver(event.target.value);
+        const vehicle = getVehicle(assignment?.vehicleId);
+        const vehicleInput = event.target.form?.querySelector("[data-payment-vehicle]");
+        const vehicleLabel = event.target.form?.querySelector("[data-payment-vehicle-label]");
+        if (vehicleInput) vehicleInput.value = vehicle?.id || "";
+        if (vehicleLabel) vehicleLabel.value = vehicleName(vehicle);
+      }
+
+      if (event.target.matches("[data-expense-scope]")) {
+        const vehicleCombo = event.target.form?.querySelector("[data-expense-vehicle]")?.closest(".field");
+        if (vehicleCombo) vehicleCombo.hidden = event.target.value === "all";
+      }
+
+      if (event.target.name === "vehicleId" && event.target.closest("form[data-form='event']")) {
         const vehicle = getVehicle(event.target.value);
-        const driverSelect = event.target.form?.querySelector("[data-payment-driver]");
-        if (driverSelect && vehicle?.driverId) driverSelect.value = vehicle.driverId;
+        const driverInput = event.target.form?.querySelector("input[name='driverId']");
+        const driverCombo = driverInput?.closest("[data-combo]");
+        const driver = getDriver(vehicle?.driverId);
+        if (driverInput && driverCombo && driver) {
+          driverInput.value = driver.id;
+          const label = driverCombo.querySelector("[data-combo-label]");
+          if (label) label.textContent = driverName(driver);
+          driverCombo.querySelectorAll("[data-combo-option]").forEach((option) => {
+            option.classList.toggle("selected", option.dataset.value === driver.id);
+          });
+        }
       }
 
       if (event.target.matches("[data-backup-file]")) {
@@ -3067,6 +3321,30 @@
         if (file) importBackup(file);
         event.target.value = "";
       }
+    });
+
+    document.addEventListener("input", (event) => {
+      if (event.target.matches("[data-combo-search]")) {
+        filterComboOptions(event.target.closest("[data-combo]"), event.target.value);
+      }
+    });
+  }
+
+  function closeCombos(except = null) {
+    document.querySelectorAll("[data-combo]").forEach((combo) => {
+      if (combo === except) return;
+      const menu = combo.querySelector("[data-combo-menu]");
+      const trigger = combo.querySelector("[data-combo-trigger]");
+      if (menu) menu.hidden = true;
+      if (trigger) trigger.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function filterComboOptions(combo, value) {
+    const query = String(value || "").trim().toLowerCase();
+    combo?.querySelectorAll("[data-combo-option]").forEach((option) => {
+      const label = String(option.dataset.label || option.textContent || "").toLowerCase();
+      option.hidden = query && !label.includes(query);
     });
   }
 
