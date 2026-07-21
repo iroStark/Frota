@@ -508,6 +508,11 @@ a {
   min-width: 0;
 }
 
+.combo [hidden],
+.combo-menu[hidden] {
+  display: none !important;
+}
+
 .combo-trigger {
   display: flex;
   align-items: center;
@@ -553,12 +558,13 @@ a {
   z-index: 80;
   display: grid;
   gap: 8px;
-  max-height: 280px;
+  max-height: min(280px, calc(100vh - 220px));
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--surface);
   box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
 .combo-search {
@@ -571,6 +577,7 @@ a {
   display: grid;
   gap: 4px;
   overflow: auto;
+  max-height: inherit;
   overscroll-behavior: contain;
 }
 
