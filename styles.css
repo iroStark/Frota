@@ -306,28 +306,17 @@ a {
 .bottom-nav a.nav-fab {
   position: relative;
   top: 0;
-  background: var(--accent);
-  color: #202020;
-  border-radius: 20px;
-  padding: 8px 0;
-  box-shadow: 0 4px 12px rgba(201, 241, 88, 0.4);
+  padding: 0;
 }
 
 .bottom-nav a.nav-fab.active {
-  background: var(--accent);
-  color: #000000;
-  box-shadow: 0 4px 12px rgba(201, 241, 88, 0.6);
+  color: var(--text);
 }
 
 [data-theme="dark"] .bottom-nav a.nav-fab {
-  background: var(--accent);
-  color: #202020;
+  color: inherit;
 }
 
-[data-theme="dark"] .bottom-nav a.nav-fab.active {
-  background: var(--primary-2);
-  color: var(--accent);
-}
 
 .bottom-nav a.active,
 .side-nav a.active {
