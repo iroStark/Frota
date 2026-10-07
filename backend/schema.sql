@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS app_state (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE app_state ADD COLUMN IF NOT EXISTS revision bigint NOT NULL DEFAULT 0;
+
 CREATE TABLE IF NOT EXISTS app_state_audit (
   id bigserial PRIMARY KEY,
   state_id text NOT NULL,

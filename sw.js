@@ -1,10 +1,10 @@
-const CACHE_NAME = "uhocha-controle-v13";
+const CACHE_NAME = "uhocha-controle-v14";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=13",
-  "./app.js?v=13",
-  "./manifest.webmanifest?v=13",
+  "./styles.css?v=14",
+  "./app.js?v=14",
+  "./manifest.webmanifest?v=14",
   "./assets/uhocha-logo.png",
   "./icons/icon.svg",
 ];
