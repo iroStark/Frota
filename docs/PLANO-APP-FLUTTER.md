@@ -411,7 +411,20 @@ Estimativas para 1 programador full-stack a tempo inteiro. Cada fase termina com
 - [ ] Contrato OpenAPI v1 revisto.
 - **Aceitação:** regras escritas e aprovadas; protótipo navegável aprovado.
 
-### Fase 2 — Backend v1 (2,5–3 semanas)
+### Fase 2 — Backend v1 (2,5–3 semanas) — 🚧 em curso (ramo `fase-2-backend`)
+
+Decisões de implementação tomadas:
+- TypeScript executado nativamente pelo Node (≥ 22.18, sem passo de build) + `tsc --noEmit` para tipos.
+- SQL direto com `pg` e migrações versionadas em `backend/migrations/` (em vez de Drizzle/Kysely: menos dependências; reavaliar se as queries crescerem).
+- Taxa diária = taxa semanal / 6 (terça a domingo) por omissão, configurável em `contract_rules`.
+- Dia parado = ≥ 4h de paragem dentro do horário de circulação desse dia. Dia de início conta; dia de devolução não conta.
+
+Feito:
+- [x] Motor de cobranças puro (`backend/domain/charges.ts`) + 30 testes.
+- [x] Esquema normalizado (`002_dominio.sql`) e executor de migrações com bloqueio.
+- [x] Importador do estado antigo + relatório de discrepâncias (`npm run import:legacy -- --dry-run`) + 7 testes.
+
+A fazer:
 - [ ] Migrar para TypeScript, Zod, Drizzle/Kysely, migrações versionadas.
 - [ ] Auth (users, JWT, refresh, roles admin/gestor/motorista, código de ativação + PIN), filtro por `driver_id` em todas as rotas para motoristas.
 - [ ] Tabelas e CRUD de viaturas, motoristas, contactos, documentos, ficheiros autenticados.

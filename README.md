@@ -97,8 +97,12 @@ Em **Settings → Networking → Generate Domain** para obter um URL `*.up.railw
 ```
 backend/
   server.js      # Express + multer + estáticos + SPA fallback
-  db.js          # Pool pg (SSL auto)
-  schema.sql     # esquema idempotente, executado no arranque
+  db.js          # Pool pg (SSL auto) + executor de migrações versionadas
+  auth.js        # chave de acesso / sessão (Fase 0)
+  backup.js      # npm run db:backup
+  migrations/    # NNN_nome.sql, aplicadas por ordem no arranque (tabela schema_migrations)
+  domain/        # regras de negócio puras em TypeScript (motor de cobranças) + testes
+  import/        # importação do estado JSON antigo para as tabelas normalizadas
   migrate.js     # CLI manual: npm run db:migrate
   create-db.js   # CLI manual: npm run db:create (uso local)
 app.js           # frontend SPA (sem build, ES modules nativos)
@@ -108,6 +112,13 @@ sw.js            # service worker (network-first em JS/CSS)
 uploads/         # local apenas; em produção usa Volume
 railway.toml     # config Railway
 ```
+
+## Desenvolvimento do backend v1 (Fase 2)
+
+- Requer Node ≥ 22.18 (executa `.ts` diretamente, sem compilação).
+- `npm test` — testes do motor de cobranças e do importador.
+- `npm run typecheck` — verificação de tipos.
+- `npm run import:legacy -- --dry-run` — gera em `backups/` um relatório da importação dos dados antigos (saldos por motorista, semanas em aberto, penalidades nunca cobradas, avisos) sem gravar nada. Sem `--dry-run` grava numa transação e recusa repetir.
 
 ### 6. Acesso e cópias de segurança
 
