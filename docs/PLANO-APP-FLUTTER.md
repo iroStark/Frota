@@ -411,7 +411,7 @@ Estimativas para 1 programador full-stack a tempo inteiro. Cada fase termina com
 - [ ] Contrato OpenAPI v1 revisto.
 - **Aceitação:** regras escritas e aprovadas; protótipo navegável aprovado.
 
-### Fase 2 — Backend v1 (2,5–3 semanas) — 🚧 em curso (ramo `fase-2-backend`)
+### Fase 2 — Backend v1 (2,5–3 semanas) — ✅ API pronta para a app (ramo `fase-2-backend`)
 
 Decisões de implementação tomadas:
 - TypeScript executado nativamente pelo Node (≥ 22.18, sem passo de build) + `tsc --noEmit` para tipos.
@@ -427,16 +427,20 @@ Feito:
 - [x] Serviços de cobrança na base: geração idempotente das semanas, penalidades 24h/72h (só sobem), pagamentos com alocação às semanas mais antigas, crédito aplicado a cobranças futuras, idempotência por `clientId`, extrato do motorista.
 - [x] API v1 (`/api/v1`): auth (login, refresh, logout, activate), `me`, `me/statement`, `users`, `drivers`, `drivers/:id/statement`, `drivers/:id/invite`, `charges`, `payments`, `admin/jobs/billing`. Tarefa de cobranças a cada 15 min com advisory lock. 11 testes de integração.
 
-A fazer:
-- [ ] CRUD de viaturas, motoristas, contactos e documentos; ficheiros autenticados (`/api/v1/files`).
-- [ ] Atribuir (assistente) e devolver viatura com acerto de contas e caução.
-- [ ] Ocorrências: criar/validar/resolver/cancelar, recálculo das cobranças afetadas (ajuste/crédito se já paga), imobilização automática.
-- [ ] Despesas e despesas em lote (por viatura / dividir total).
-- [ ] Declarações de pagamento do motorista (enviar comprovativo → gestor confirma/rejeita) e ocorrências comunicadas pelo motorista.
-- [ ] Anular pagamentos/cobranças com motivo (só admin) e auditoria por diff.
-- [ ] Dashboard, alertas (incl. > 72h e validade de documentos) e relatórios calculados no servidor.
-- [ ] `GET /sync/changes` para o modo offline; contrato OpenAPI para gerar o cliente Dart.
-- [ ] Teste de isolamento por motorista em todas as rotas novas; teste de mudança da taxa semanal a meio do contrato.
+- [x] Cadastro: viaturas (estado derivado; abater), motoristas com contactos, documentos com validade; remoção lógica.
+- [x] Ficheiros autenticados (`/files`): conteúdo verificado; motorista só abre o que é seu.
+- [x] Atribuir e devolver: uma ativa por viatura/motorista, checklist de entrega/devolução, última semana cobrada na devolução, acerto com caução.
+- [x] Ocorrências: gestor (validada logo) e motorista (por validar), validar/editar/resolver/cancelar com recálculo das cobranças (excesso pago volta a crédito), imobilização e encerramento de atribuição, multas e franquia limitada.
+- [x] Pagamentos individuais e em grupo, anulação (admin), comprovativos do motorista (prazo conta a hora do pagamento se o comprovativo chegar até 12h depois).
+- [x] Despesas: única, por viatura (total = valor × N) e dividir total (sem perder kwanzas).
+- [x] Painel, alertas (> 72h, entregas pendentes, documentos, por validar) e ecrã inicial do motorista com estimativa da semana.
+- [x] `GET /sync/changes` para a cache offline; auditoria de todas as operações.
+- [x] Referência da API em `docs/API-v1.md`. 42 testes unitários + 27 de integração.
+
+A fazer (antes do corte):
+- [ ] Simulação da importação com uma cópia real de produção e revisão do relatório com o negócio.
+- [ ] Notificações push (FCM) — fica para a Fase 6.
+- [ ] Relatórios por período/motorista/viatura e exportação PDF/CSV — Fase 6.
 - **Aceitação:** migração de uma cópia de produção reproduz os totais históricos (com discrepâncias explicadas); cobertura ≥80% no motor de cobranças.
 
 ### Fase 3 — Fundações Flutter (1 semana)

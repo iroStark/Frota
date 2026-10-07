@@ -1,5 +1,6 @@
 // Testes de integração da API v1 contra Postgres real.
-//   npm run test:integration   (cria a base uhocha_it do zero)
+//   npm run test:integration   (cada ficheiro cria a sua base uhocha_it_* do zero)
+import "../test/isolated-db.ts";
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import { after, before, describe, it } from "node:test";

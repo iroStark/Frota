@@ -17,7 +17,7 @@
     "import:legacy": "node backend/import/import-legacy.ts",
     "typecheck": "tsc",
     "user:create": "node backend/cli/create-user.ts",
-    "test:integration": "dropdb --if-exists uhocha_it && createdb uhocha_it && DATABASE_URL=postgresql://localhost:5432/uhocha_it JWT_SECRET=teste node --test \"backend/**/*.it.ts\""
+    "test:integration": "node --test \"backend/**/*.it.ts\""
   },
   "dependencies": {
     "cors": "^2.8.5",

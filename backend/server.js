@@ -2,12 +2,13 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import multer from "multer";
-import { mkdir, open, unlink } from "node:fs/promises";
+import { mkdir, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createV1Router, runBillingJobs } from "./api/v1.ts";
 import { authMode, registerAuthRoutes, requireAuth } from "./auth.js";
+import { MAX_UPLOAD_BYTES, allowedUploads, hasExpectedSignature, uploadsDir } from "./lib/files.ts";
 import { migrate, pool } from "./db.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -15,19 +16,7 @@ const rootDir = resolve(__dirname, "..");
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const stateId = process.env.APP_STATE_ID || "main";
-const uploadsDir = process.env.UPLOADS_DIR
-  ? resolve(process.env.UPLOADS_DIR)
-  : join(rootDir, "uploads");
-
 app.set("trust proxy", true);
-const allowedUploads = new Map([
-  ["application/pdf", ".pdf"],
-  ["image/jpeg", ".jpg"],
-  ["image/png", ".png"],
-  ["image/webp", ".webp"],
-  ["image/heic", ".heic"],
-  ["image/heif", ".heif"],
-]);
 const AUDIT_MIN_INTERVAL = "5 minutes";
 const AUDIT_RETENTION = "90 days";
 const corsOrigins = String(process.env.CORS_ORIGINS || "")
@@ -46,7 +35,7 @@ const upload = multer({
       callback(null, `${uploadId}${allowedUploads.get(file.mimetype)}`);
     },
   }),
-  limits: { fileSize: 12 * 1024 * 1024 },
+  limits: { fileSize: MAX_UPLOAD_BYTES },
   fileFilter: (_request, file, callback) => {
     if (allowedUploads.has(file.mimetype)) {
       callback(null, true);
@@ -212,33 +201,6 @@ async function saveState(request, response, next) {
     next(error);
   } finally {
     client.release();
-  }
-}
-
-// Confirma pelos primeiros bytes que o ficheiro é mesmo do tipo declarado pelo browser.
-async function hasExpectedSignature(path, mimeType) {
-  const handle = await open(path, "r");
-  try {
-    const { buffer, bytesRead } = await handle.read(Buffer.alloc(12), 0, 12, 0);
-    if (bytesRead < 4) return false;
-    const ascii = (start, end) => buffer.subarray(start, end).toString("latin1");
-    switch (mimeType) {
-      case "application/pdf":
-        return ascii(0, 4) === "%PDF";
-      case "image/jpeg":
-        return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-      case "image/png":
-        return buffer.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
-      case "image/webp":
-        return ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP";
-      case "image/heic":
-      case "image/heif":
-        return ascii(4, 8) === "ftyp";
-      default:
-        return false;
-    }
-  } finally {
-    await handle.close();
   }
 }
 
