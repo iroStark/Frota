@@ -30,6 +30,8 @@ Aplicativo responsivo para controlar viaturas, motoristas, entregas, despesas, o
 
 5. Abrir o app em `http://localhost:3000`.
 
+Em desenvolvimento, sem `APP_ACCESS_KEY` no `.env`, a API fica aberta (aviso no arranque). Para testar o ecrã de entrada, define `APP_ACCESS_KEY`.
+
 O backend usa a base `uhocha_controle` e guarda o estado do app em `app_state.payload` como `jsonb`. Cada gravação também cria um histórico em `app_state_audit`. Os ficheiros enviados (fotos, BI, carta, livrete, etc.) ficam em `uploads/` e os metadados em `uploads`.
 
 ---
@@ -54,6 +56,9 @@ Em **Variables** do serviço da app, define:
 | `PGSSL`          | *(opcional)* `true`                      | Só necessário se usares a URL **pública** do Postgres.                |
 | `UPLOADS_DIR`    | `/data/uploads`                          | Caminho do Volume (passo 3).                                          |
 | `NODE_ENV`       | `production`                             |                                                                       |
+| `APP_ACCESS_KEY` | *(frase longa e secreta)*                | **Obrigatória.** Chave pedida no ecrã de entrada. Sem ela, em produção a API recusa todos os pedidos (503). |
+| `SESSION_SECRET` | *(opcional, valor aleatório)*            | Assina os cookies de sessão. Mudar este valor termina todas as sessões. |
+| `CORS_ORIGINS`   | *(opcional)*                             | Só se o frontend for servido noutro domínio (lista separada por vírgulas). |
 
 `PORT` é definido automaticamente pelo Railway — o servidor já o respeita.
 
@@ -103,3 +108,10 @@ sw.js            # service worker (network-first em JS/CSS)
 uploads/         # local apenas; em produção usa Volume
 railway.toml     # config Railway
 ```
+
+### 6. Acesso e cópias de segurança
+
+- A app pede a **chave de acesso** (`APP_ACCESS_KEY`) uma vez por aparelho; a sessão dura 30 dias (cookie `HttpOnly`). Ficheiros em `/uploads` também exigem sessão.
+- Se dois aparelhos gravarem ao mesmo tempo, o servidor recusa a gravação desatualizada (409) e a app oferece descarregar uma cópia dos dados do aparelho antes de carregar a versão do servidor.
+- `npm run db:backup` exporta o estado e os metadados dos uploads para `backups/` (para produção: `DATABASE_URL=<url pública do Postgres> PGSSL=true npm run db:backup`). Os ficheiros do Volume têm de ser copiados à parte.
+- `app_state_audit` guarda no máximo uma cópia a cada 5 minutos e apaga cópias com mais de 90 dias.

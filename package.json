@@ -11,7 +11,8 @@
     "dev": "node --watch backend/server.js",
     "db:create": "node backend/create-db.js",
     "db:migrate": "node backend/migrate.js",
-    "db:setup": "npm run db:create && npm run db:migrate"
+    "db:setup": "npm run db:create && npm run db:migrate",
+    "db:backup": "node backend/backup.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

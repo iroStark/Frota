@@ -2299,3 +2299,27 @@ td.value-danger { color: var(--danger); font-weight: 700; }
   .profile-header { gap: 14px; }
   .detail-toolbar .button { padding: 0 14px; }
 }
+
+/* Ecrã de entrada (chave de acesso) */
+.login-modal form {
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+
+.login-modal .login-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+}
+
+.login-modal::backdrop {
+  background: var(--bg);
+}
+
+.login-modal .login-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}

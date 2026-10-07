@@ -2,6 +2,7 @@
   "use strict";
 
   const STORE_KEY = "uhocha-controle-v1";
+  const SYNC_META_KEY = "uhocha-sync-meta";
   const API_BASE_URL = String(
     window.UHOCHA_API_URL || (location.protocol === "file:" ? "http://localhost:3000" : location.origin),
   ).replace(/\/$/, "");
@@ -72,7 +73,10 @@
   let activeReportTab = "geral";
   let activeDetailTab = "resumo";
   let syncTimer = null;
-  let hasPendingLocalChange = false;
+  let syncInFlight = null;
+  let localChangeSeq = 0;
+  let loginDialog = null;
+  let syncMeta = loadSyncMeta();
 
   const app = document.querySelector("#app");
 
@@ -117,26 +121,90 @@
 
   function normalizeState(saved) {
     const seeded = seedState();
-    return {
+    return reconcileAssignments({
       ...seeded,
       ...saved,
       settings: { ...seeded.settings, ...(saved.settings || {}) },
       company: { ...seeded.company, ...(saved.company || {}) },
-      vehicles: Array.isArray(saved.vehicles) ? saved.vehicles : seeded.vehicles,
+      vehicles: Array.isArray(saved.vehicles)
+        ? saved.vehicles.map((vehicle) => (vehicle.status === "inativo" ? { ...vehicle, status: "imobilizado" } : vehicle))
+        : seeded.vehicles,
       drivers: Array.isArray(saved.drivers) ? saved.drivers : [],
-      assignments: Array.isArray(saved.assignments) ? saved.assignments : [],
+      assignments: Array.isArray(saved.assignments) ? [...saved.assignments] : [],
       payments: Array.isArray(saved.payments) ? saved.payments : [],
       expenses: Array.isArray(saved.expenses) ? saved.expenses : [],
-      events: Array.isArray(saved.events) ? saved.events : [],
+      events: Array.isArray(saved.events) ? saved.events.map(normalizeEvent) : [],
       documents: Array.isArray(saved.documents) ? saved.documents : [],
       notes: Array.isArray(saved.notes) ? saved.notes : [],
-    };
+    });
+  }
+
+  // Garante que cada viatura com motorista tem uma atribuição ativa (dados antigos permitiam definir
+  // o motorista diretamente na viatura) e que viaturas não apontam para motoristas inexistentes.
+  function reconcileAssignments(appState) {
+    const driverIds = new Set(appState.drivers.map((driver) => driver.id));
+    appState.vehicles = appState.vehicles.map((vehicle) => (
+      vehicle.driverId && !driverIds.has(vehicle.driverId) ? { ...vehicle, driverId: "" } : vehicle
+    ));
+    appState.vehicles.forEach((vehicle) => {
+      if (!vehicle.driverId) return;
+      const hasActive = appState.assignments.some((assignment) => (
+        assignment.status === "ativo" && assignment.vehicleId === vehicle.id && assignment.driverId === vehicle.driverId
+      ));
+      const driverBusy = appState.assignments.some((assignment) => (
+        assignment.status === "ativo" && assignment.driverId === vehicle.driverId && assignment.vehicleId !== vehicle.id
+      ));
+      if (hasActive || driverBusy) return;
+      const startAt = vehicle.assignedAt || vehicle.updatedAt || vehicle.createdAt || new Date().toISOString();
+      appState.assignments.push({
+        id: uid(),
+        vehicleId: vehicle.id,
+        driverId: vehicle.driverId,
+        startAt,
+        weeklyFee: Number(appState.settings.weeklyFee || 0),
+        depositReceived: 0,
+        documents: {},
+        status: "ativo",
+        notes: "Atribuição criada automaticamente a partir do motorista definido na viatura.",
+        synthetic: true,
+        createdAt: new Date().toISOString(),
+      });
+    });
+    return appState;
+  }
+
+  // Dados antigos: "em_curso" passou a "aberto"; a imobilização era aplicada logo na criação.
+  function normalizeEvent(evt) {
+    const next = { ...evt };
+    if (next.status === "em_curso") next.status = "aberto";
+    if (next.immobilizeVehicle && next.immobilizationApplied === undefined) next.immobilizationApplied = true;
+    return next;
+  }
+
+  // revision: última revisão do servidor em que este aparelho se baseou (null = nunca sincronizou).
+  // pending: há alterações locais ainda não gravadas no servidor (sobrevive a recarregar a página).
+  function loadSyncMeta() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SYNC_META_KEY) || "null");
+      if (saved && typeof saved === "object") {
+        return { revision: Number.isInteger(saved.revision) ? saved.revision : null, pending: Boolean(saved.pending), legacy: false };
+      }
+    } catch (error) {
+      console.warn(error);
+    }
+    return { revision: null, pending: false, legacy: Boolean(localStorage.getItem(STORE_KEY)) };
+  }
+
+  function saveSyncMeta() {
+    localStorage.setItem(SYNC_META_KEY, JSON.stringify({ revision: syncMeta.revision, pending: syncMeta.pending }));
   }
 
   function persist(options = {}) {
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
     if (options.remote !== false) {
-      hasPendingLocalChange = true;
+      localChangeSeq += 1;
+      syncMeta.pending = true;
+      saveSyncMeta();
       queueRemoteSync();
     }
   }
@@ -156,38 +224,67 @@
   }
 
   async function syncState() {
+    if (syncInFlight) {
+      await syncInFlight.catch(() => {});
+    }
+    if (!syncMeta.pending) return;
+    if (syncMeta.revision === null) {
+      // Nunca vimos o estado do servidor: primeiro carregar, para não sobrescrever às cegas.
+      await loadRemoteState();
+      return;
+    }
+    syncInFlight = pushState();
+    try {
+      await syncInFlight;
+    } finally {
+      syncInFlight = null;
+    }
+  }
+
+  async function pushState() {
+    const seqAtStart = localChangeSeq;
     const response = await fetch(apiUrl("/api/state"), {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ state }),
+      body: JSON.stringify({ state, baseRevision: syncMeta.revision }),
     });
 
+    if (response.status === 401) {
+      showLogin();
+      return;
+    }
+    if (response.status === 409) {
+      await handleConflict();
+      return;
+    }
     if (!response.ok) {
       throw new Error(`Falha ao guardar no backend (${response.status}).`);
     }
 
-    hasPendingLocalChange = false;
+    const data = await response.json();
+    syncMeta.revision = data.revision;
+    if (localChangeSeq === seqAtStart) syncMeta.pending = false;
+    saveSyncMeta();
+    if (syncMeta.pending) queueRemoteSync();
   }
 
-  function hasUsableRemoteState(remoteState) {
-    return Boolean(
-      remoteState
-        && typeof remoteState === "object"
-        && !Array.isArray(remoteState)
-        && (
-          remoteState.version
-          || remoteState.vehicles?.length
-          || remoteState.drivers?.length
-          || remoteState.assignments?.length
-          || remoteState.payments?.length
-          || remoteState.expenses?.length
-          || remoteState.events?.length
-          || remoteState.documents?.length
-        ),
+  const COPY_BEFORE_RELOAD_OPTIONS = { confirmLabel: "Descarregar cópia", cancelLabel: "Não, só carregar", tone: "neutral" };
+
+  // Outro aparelho gravou entretanto. O servidor ganha, mas o utilizador pode guardar a versão deste aparelho.
+  async function handleConflict() {
+    const keepCopy = await confirmAction(
+      "Dados alterados noutro aparelho",
+      "Os dados no servidor foram alterados noutro aparelho. Vamos carregar a versão do servidor. Quer descarregar primeiro uma cópia dos dados deste aparelho (pode importá-la depois em Relatórios → Importar)?",
+      COPY_BEFORE_RELOAD_OPTIONS,
     );
+    if (keepCopy) exportBackup("conflito");
+    syncMeta.pending = false;
+    syncMeta.revision = null;
+    saveSyncMeta();
+    await loadRemoteState({ force: true });
   }
 
   function meaningfulRecordCount(appState) {
@@ -213,13 +310,23 @@
       + (Array.isArray(appState.notes) ? appState.notes.length : 0);
   }
 
-  async function loadRemoteState() {
+  async function loadRemoteState(options = {}) {
     try {
       const response = await fetch(apiUrl("/api/state"), {
         headers: { Accept: "application/json" },
       });
 
+      if (response.status === 401) {
+        showLogin();
+        return;
+      }
+
       if (response.status === 404) {
+        // Servidor vazio: este aparelho publica o que tem.
+        syncMeta.revision = 0;
+        syncMeta.pending = true;
+        syncMeta.legacy = false;
+        saveSyncMeta();
         queueRemoteSync(0);
         return;
       }
@@ -229,25 +336,115 @@
       }
 
       const data = await response.json();
-      if (!hasUsableRemoteState(data.state)) {
+      const remoteRevision = Number(data.revision || 0);
+
+      if (!options.force && syncMeta.pending && syncMeta.revision === remoteRevision) {
+        // As alterações locais partem da versão atual do servidor: basta enviá-las.
         queueRemoteSync(0);
         return;
       }
 
-      const remoteState = normalizeState(data.state);
-      if (meaningfulRecordCount(state) > meaningfulRecordCount(remoteState)) {
-        queueRemoteSync(0);
-        return;
+      const remoteState = normalizeState(data.state || {});
+      const localDiffers = JSON.stringify(state) !== JSON.stringify(remoteState);
+      const localAtRisk = !options.force && localDiffers && (
+        (syncMeta.pending && syncMeta.revision !== null)
+        || (syncMeta.legacy && meaningfulRecordCount(state) > meaningfulRecordCount(remoteState))
+      );
+      if (localAtRisk) {
+        const keepCopy = await confirmAction(
+          "Dados diferentes neste aparelho",
+          "Este aparelho tem alterações que não chegaram ao servidor, e o servidor foi alterado entretanto. Vamos carregar a versão do servidor. Quer descarregar primeiro uma cópia dos dados deste aparelho?",
+          COPY_BEFORE_RELOAD_OPTIONS,
+        );
+        if (keepCopy) exportBackup("aparelho");
       }
 
-      if (hasPendingLocalChange) return;
       state = remoteState;
+      syncMeta = { revision: remoteRevision, pending: false, legacy: false };
+      saveSyncMeta();
       persist({ remote: false });
       render();
-      toast("Dados carregados do PostgreSQL.");
     } catch (error) {
       console.warn("Backend indisponível. O app continua a guardar neste aparelho.", error);
     }
+  }
+
+  async function startSession() {
+    try {
+      const response = await fetch(apiUrl("/api/session"), { headers: { Accept: "application/json" } });
+      const session = response.ok ? await response.json() : { authRequired: false, authenticated: true };
+      const logoutButton = document.querySelector("#logoutButton");
+      if (logoutButton) logoutButton.hidden = !session.authRequired;
+      if (session.authRequired && !session.authenticated) {
+        showLogin(session.configured === false ? "O servidor ainda não tem chave de acesso configurada." : "");
+        return;
+      }
+      await loadRemoteState();
+    } catch (error) {
+      console.warn("Backend indisponível. O app continua a guardar neste aparelho.", error);
+    }
+  }
+
+  function showLogin(message = "") {
+    if (loginDialog) return;
+    const dialog = document.createElement("dialog");
+    dialog.className = "modal login-modal";
+    dialog.innerHTML = `
+      <form data-login-form>
+        <img class="login-logo" src="assets/uhocha-logo.png" alt="" />
+        <h2>Entrar</h2>
+        <p class="muted">Introduza a chave de acesso da UHOCHA para ver e gravar os dados.</p>
+        <div class="field">
+          <label for="loginKey">Chave de acesso</label>
+          <input id="loginKey" name="key" type="password" autocomplete="current-password" required />
+        </div>
+        <p class="login-error" data-login-error ${message ? "" : "hidden"}>${h(message)}</p>
+        <button class="button full" type="submit">Entrar</button>
+      </form>
+    `;
+    dialog.addEventListener("cancel", (event) => event.preventDefault());
+    dialog.querySelector("form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const errorNode = form.querySelector("[data-login-error]");
+      const button = form.querySelector("button[type='submit']");
+      button.disabled = true;
+      try {
+        const response = await fetch(apiUrl("/api/session"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ key: form.key.value }),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Não foi possível entrar.");
+        }
+        dialog.close();
+        dialog.remove();
+        loginDialog = null;
+        const logoutButton = document.querySelector("#logoutButton");
+        if (logoutButton) logoutButton.hidden = false;
+        await loadRemoteState();
+        if (syncMeta.pending) queueRemoteSync(0);
+      } catch (error) {
+        errorNode.textContent = error.message;
+        errorNode.hidden = false;
+      } finally {
+        button.disabled = false;
+      }
+    });
+    document.body.append(dialog);
+    loginDialog = dialog;
+    if (dialog.showModal) dialog.showModal();
+    else dialog.setAttribute("open", "");
+    dialog.querySelector("input").focus();
+  }
+
+  async function logout() {
+    const ok = await confirmAction("Sair", "Vai precisar da chave de acesso para voltar a entrar neste aparelho.");
+    if (!ok) return;
+    await fetch(apiUrl("/api/session"), { method: "DELETE" }).catch(() => {});
+    showLogin();
   }
 
   function h(value) {
@@ -284,6 +481,8 @@
       phone: "call-02",
       users: "user-multiple-02",
       back: "arrow-left-01",
+      info: "information-circle",
+      logout: "logout-03",
     };
     return `<i class="icon hgi-stroke hgi-${hugeicons[name] || hugeicons.layout}" aria-hidden="true"></i>`;
   }
@@ -455,6 +654,38 @@
     return { label: "Válido", severity: "ok" };
   }
 
+  const EXEMPT_EVENT_TYPES = ["doenca", "licenca", "manutencao", "paragem_tecnica", "sinistro", "avaria"];
+  const OPEN_EVENT_STATUSES = ["agendado", "aberto", "em_curso"];
+
+  function isEventOpen(evt) {
+    return OPEN_EVENT_STATUSES.includes(evt?.status);
+  }
+
+  function isEventExempting(evt) {
+    return Boolean(evt.exemptFromFee || evt.immobilizeVehicle || EXEMPT_EVENT_TYPES.includes(evt.type));
+  }
+
+  function endOfDayIfDateOnly(value) {
+    if (value.length <= 10) {
+      const d = new Date(value);
+      d.setHours(23, 59, 59, 999);
+      return d.getTime();
+    }
+    return new Date(value).getTime();
+  }
+
+  // Período efetivo de uma ocorrência. Sem término e ainda aberta → sem fim (até ser resolvida).
+  function eventRange(evt) {
+    const start = new Date(evt.startDate || evt.date || evt.createdAt).getTime();
+    let end = Infinity;
+    if (evt.endDate) end = endOfDayIfDateOnly(evt.endDate);
+    if (evt.status === "resolvido") {
+      if (evt.resolvedAt) end = Math.min(end, new Date(evt.resolvedAt).getTime());
+      else if (!evt.endDate) end = start + 86400000;
+    }
+    return { start, end };
+  }
+
   function getVehicleExemptionReason(vehicle, dateTarget = new Date()) {
     if (!vehicle) return null;
     const driverId = vehicle.driverId;
@@ -466,29 +697,13 @@
       return { reason: "Viatura em manutenção", type: "manutencao" };
     }
 
-    const targetDate = new Date(dateTarget);
-    const targetMonday = mondayOf(targetDate).getTime();
+    const targetMonday = mondayOf(new Date(dateTarget)).getTime();
     const targetNextMonday = targetMonday + 7 * 86400000;
 
     const event = state.events.find((evt) => {
       if (evt.vehicleId !== vehicle.id && (!driverId || evt.driverId !== driverId)) return false;
-      const isExemptType = evt.exemptFromFee || evt.immobilizeVehicle || ["doenca", "licenca", "manutencao", "paragem_tecnica", "sinistro", "avaria"].includes(evt.type);
-      if (!isExemptType) return false;
-
-      const start = new Date(evt.startDate || evt.date).getTime();
-      let end = Infinity;
-      if (evt.endDate) {
-        if (evt.endDate.length <= 10) {
-          const d = new Date(evt.endDate);
-          d.setHours(23, 59, 59, 999);
-          end = d.getTime();
-        } else {
-          end = new Date(evt.endDate).getTime();
-        }
-      } else if (evt.status === "resolvido") {
-        end = start + 86400000;
-      }
-
+      if (!isEventExempting(evt)) return false;
+      const { start, end } = eventRange(evt);
       return start < targetNextMonday && end >= targetMonday;
     });
 
@@ -502,7 +717,7 @@
         avaria: "Avaria mecânica",
       };
       const typeLabel = labels[event.type] || "Paragem autorizada";
-      const endStr = event.endDate ? ` até ${dateLabel(event.endDate)}` : "";
+      const endStr = event.endDate ? ` até ${dateLabel(event.endDate)}` : " (sem data de fim)";
       return { reason: `${typeLabel}${endStr}`, type: event.type, event };
     }
 
@@ -517,8 +732,12 @@
     const weekPayments = currentWeekPayments();
     const assigned = assignedVehicles();
 
-    const workingVehicles = assigned.filter((vehicle) => !isVehicleExempt(vehicle));
-    const exemptVehicles = assigned.filter((vehicle) => isVehicleExempt(vehicle));
+    const hasExemptPayment = (vehicle) => weekPayments.some((payment) => (
+      payment.isExempt && (payment.vehicleId === vehicle.id || payment.driverId === vehicle.driverId)
+    ));
+    const isExemptThisWeek = (vehicle) => isVehicleExempt(vehicle) || hasExemptPayment(vehicle);
+    const workingVehicles = assigned.filter((vehicle) => !isExemptThisWeek(vehicle));
+    const exemptVehicles = assigned.filter(isExemptThisWeek);
 
     const expected = workingVehicles.length * state.settings.weeklyFee;
     const collected = weekPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
@@ -591,9 +810,39 @@
           type: status.severity,
           icon: "file",
           title: doc.name || "Documento",
-          text: `${status.label}: ${vehicleName(getVehicle(doc.vehicleId)) || driverName(getDriver(doc.driverId))}`,
+          text: `${status.label}: ${documentOwnerLabel(doc)}`,
+          ...(doc.scope === "driver" && doc.driverId ? { actionRoute: "motorista", driverId: doc.driverId } : {}),
         });
       }
+    });
+
+    state.drivers.forEach((driver) => {
+      [["BI", driver.biValid], ["Carta de condução", driver.licenseValid]].forEach(([label, expiresAt]) => {
+        if (!expiresAt) return;
+        const status = documentStatus({ expiresAt });
+        if (status.severity !== "warn" && status.severity !== "danger") return;
+        alerts.push({
+          type: status.severity,
+          icon: "file",
+          title: `${label}: ${driverName(driver)}`,
+          text: `${status.label} · validade ${dateLabel(expiresAt)}`,
+          actionRoute: "motorista",
+          driverId: driver.id,
+        });
+      });
+    });
+
+    const weekAgo = Date.now() - 7 * 86400000;
+    state.events.forEach((evt) => {
+      if (!isEventOpen(evt) || evt.endDate || !isEventExempting(evt)) return;
+      if (eventRange(evt).start > weekAgo) return;
+      alerts.push({
+        type: "warn",
+        icon: "clock",
+        title: `Ocorrência sem fim há mais de 7 dias`,
+        text: `${eventLabel(evt.type)} · ${driverName(getDriver(evt.driverId))} — continua a isentar a entrega até ser resolvida.`,
+        ...(evt.driverId ? { actionRoute: "motorista", driverId: evt.driverId } : {}),
+      });
     });
 
     state.payments.forEach((payment) => {
@@ -608,7 +857,8 @@
       }
     });
 
-    return alerts.slice(0, 12);
+    const rank = { danger: 0, warn: 1, info: 2 };
+    return alerts.sort((a, b) => (rank[a.type] ?? 3) - (rank[b.type] ?? 3));
   }
 
   function setRoute(input) {
@@ -641,92 +891,86 @@
     setRoute({ name, id });
   }
 
-  function pageHead(title, subtitle = "") {
-    const now = new Intl.DateTimeFormat("pt-AO", { weekday: "short", day: "2-digit", month: "short" }).format(new Date());
-    return `
-      <div class="page-head">
-        <div>
-          <h1>${h(title)}</h1>
-          ${subtitle ? `<p>${h(subtitle)}</p>` : ""}
-        </div>
-        <span class="date-chip">${h(now)}</span>
-      </div>
-    `;
+  function applyImmobilization(evt, at) {
+    if (!evt.immobilizeVehicle || !evt.vehicleId || evt.immobilizationApplied) return false;
+    const activeAssignment = activeAssignmentForVehicle(evt.vehicleId);
+    state.vehicles = state.vehicles.map((vehicle) => (
+      vehicle.id === evt.vehicleId
+        ? { ...vehicle, status: "imobilizado", driverId: evt.releaseAssignment ? "" : vehicle.driverId }
+        : vehicle
+    ));
+    if (evt.releaseAssignment && activeAssignment) {
+      state.assignments = state.assignments.map((assignment) => (
+        assignment.id === activeAssignment.id ? closeOpenAssignment(assignment, at, "sinistro") : assignment
+      ));
+    }
+    evt.immobilizationApplied = true;
+    return true;
   }
 
+  function releaseImmobilization(evt, nowTime) {
+    if (!evt.immobilizeVehicle || !evt.vehicleId) return false;
+    const vehicle = getVehicle(evt.vehicleId);
+    if (!vehicle || vehicle.status !== "imobilizado") return false;
+    const otherActive = state.events.some((other) => {
+      if (other.id === evt.id || other.vehicleId !== evt.vehicleId || !other.immobilizeVehicle || !isEventOpen(other)) return false;
+      const { start, end } = eventRange(other);
+      return start <= nowTime && nowTime <= end;
+    });
+    if (otherActive) return false;
+    vehicle.status = vehicle.driverId ? "ativo" : "parado";
+    return true;
+  }
+
+  // Avança automaticamente o estado das ocorrências: agendado → aberto → resolvido (quando passa o término).
   function syncAutomaticEventStates() {
-    const now = new Date();
-    const nowTime = now.getTime();
+    const nowTime = Date.now();
     let stateChanged = false;
 
     state.events.forEach((evt) => {
-      const startDateStr = evt.startDate || evt.date;
-      if (!startDateStr) return;
+      if (!isEventOpen(evt)) return;
+      const { start, end } = eventRange(evt);
+      if (Number.isNaN(start)) return;
 
-      const start = new Date(startDateStr).getTime();
-      let end = null;
-
-      if (evt.endDate) {
-        if (evt.endDate.length <= 10) {
-          const d = new Date(evt.endDate);
-          d.setHours(23, 59, 59, 999);
-          end = d.getTime();
-        } else {
-          end = new Date(evt.endDate).getTime();
-        }
-      }
-
-      if (end && nowTime > end) {
-        if (evt.status !== "resolvido") {
-          evt.status = "resolvido";
-          stateChanged = true;
-
-          if (evt.immobilizeVehicle && evt.vehicleId) {
-            const vehicle = state.vehicles.find((v) => v.id === evt.vehicleId);
-            if (vehicle) {
-              const otherActiveImmobilizing = state.events.some((e) => {
-                if (e.id === evt.id || e.vehicleId !== evt.vehicleId || e.status === "resolvido" || !e.immobilizeVehicle) return false;
-                const eStart = new Date(e.startDate || e.date).getTime();
-                let eEnd = e.endDate ? new Date(e.endDate).getTime() : Infinity;
-                if (e.endDate && e.endDate.length <= 10) {
-                  const ed = new Date(e.endDate);
-                  ed.setHours(23, 59, 59, 999);
-                  eEnd = ed.getTime();
-                }
-                return eStart <= nowTime && nowTime <= eEnd;
-              });
-
-              if (!otherActiveImmobilizing && vehicle.status !== "ativo") {
-                vehicle.status = "ativo";
-                stateChanged = true;
-              }
-            }
-          }
-        }
-      } else if (end && nowTime >= start && nowTime <= end) {
-        if (evt.status === "agendado" || evt.status === "aberto") {
-          evt.status = "em_curso";
-          stateChanged = true;
-
-          if (evt.immobilizeVehicle && evt.vehicleId) {
-            const vehicle = state.vehicles.find((v) => v.id === evt.vehicleId);
-            if (vehicle && vehicle.status === "ativo") {
-              vehicle.status = "inativo";
-              stateChanged = true;
-            }
-          }
-        }
-      } else if (nowTime < start) {
-        if (evt.status !== "agendado" && evt.status !== "resolvido") {
+      if (nowTime < start) {
+        if (evt.status !== "agendado") {
           evt.status = "agendado";
           stateChanged = true;
         }
+        return;
       }
+
+      if (nowTime > end) {
+        evt.status = "resolvido";
+        evt.resolvedAt = new Date(end).toISOString();
+        releaseImmobilization(evt, nowTime);
+        stateChanged = true;
+        return;
+      }
+
+      if (evt.status !== "aberto") {
+        evt.status = "aberto";
+        stateChanged = true;
+      }
+      if (applyImmobilization(evt, new Date(start).toISOString())) stateChanged = true;
     });
 
     if (stateChanged) {
-      persistState();
+      persist();
     }
+  }
+
+  function resolveEvent(id) {
+    const evt = state.events.find((item) => item.id === id);
+    if (!evt || !isEventOpen(evt)) return;
+    const now = new Date();
+    evt.status = "resolvido";
+    evt.resolvedAt = now.toISOString();
+    if (!evt.endDate || endOfDayIfDateOnly(evt.endDate) > now.getTime()) evt.endDate = now.toISOString();
+    releaseImmobilization(evt, now.getTime());
+    persist();
+    toast("Ocorrência resolvida.");
+    render();
   }
 
   function updateHeaderState() {
@@ -1096,8 +1340,11 @@
           ["motorista", "Motorista"],
           ["proprietaria", "Proprietária"],
         ], "proprietaria")}
-        ${inputField("amount", "Valor", "number", "", "min='0' step='1000'")}
+        ${inputField("amount", "Valor", "number", "", "min='0' step='1000' data-expense-amount")}
         ${inputField("paidTo", "Pago a", "text", "", "placeholder='Oficina, seguradora, posto...'")}
+        <div class="field span-3" data-expense-total hidden>
+          <small class="muted" data-expense-total-text></small>
+        </div>
         <div class="field span-3">
           <label for="expenseNotes">Notas</label>
           <textarea id="expenseNotes" name="notes" placeholder="Detalhe da despesa, recibo ou autorização."></textarea>
@@ -1222,7 +1469,10 @@
         ${fileField("propertyTitleFile", isEdit && v.files?.propertyTitle?.url ? "Substituir título" : "Upload título", "accept='image/*,application/pdf'")}
         ${fileField("insuranceFile", isEdit && v.files?.insurancePolicy?.url ? "Substituir seguro" : "Upload seguro", "accept='image/*,application/pdf'")}
         ${fileField("inspectionFile", isEdit && v.files?.inspection?.url ? "Substituir inspeção" : "Upload inspeção", "accept='image/*,application/pdf' class='span-2'")}
-        ${selectField("driverId", "Motorista atribuído", driverOptions(true), v.driverId ?? "", "class='span-2'")}
+        <div class="field span-2">
+          <label>Motorista atribuído</label>
+          <small class="muted">${v.driverId ? h(driverName(getDriver(v.driverId))) : "Sem motorista"} · altere em Frota → Atribuições.</small>
+        </div>
         ${selectField("status", "Estado", [["ativo", "Ativo"], ["manutencao", "Manutenção"], ["imobilizado", "Imobilizado"], ["parado", "Parado"]], v.status ?? "ativo")}
         <button class="button full span-3" type="submit">${icon("save")}${isEdit ? "Atualizar viatura" : "Guardar viatura"}</button>
       </form>
@@ -1444,13 +1694,15 @@
     const contacts = Array.isArray(driver.contacts) ? driver.contacts : [];
     const mapHref = residenceMapUrl(driver.addressLocation);
     const totalReceived = state.payments.filter((p) => p.driverId === driver.id).reduce((sum, p) => sum + Number(p.amount || 0) + Number(p.penaltyPaid || 0), 0);
-    const totalPenalties = state.payments.filter((p) => p.driverId === driver.id).reduce((sum, p) => sum + paymentPenalty(p).amount, 0);
+    const totalPenalties = state.payments
+      .filter((p) => p.driverId === driver.id)
+      .reduce((sum, p) => sum + Math.max(0, paymentPenalty(p).amount - Number(p.penaltyPaid || 0)), 0);
     const openEvents = state.events.filter((e) => e.driverId === driver.id && e.status !== "resolvido").length;
     return `
       <section class="section-band">
         <div class="kpi-strip">
           <div class="kpi"><span>Total recebido</span><strong>${money(totalReceived)}</strong></div>
-          <div class="kpi"><span>Penalidades devidas</span><strong>${money(totalPenalties)}</strong></div>
+          <div class="kpi"><span>Penalidades em dívida</span><strong>${money(totalPenalties)}</strong></div>
           <div class="kpi"><span>Ocorrências abertas</span><strong>${openEvents}</strong></div>
         </div>
       </section>
@@ -1907,9 +2159,9 @@
           </div>
         </div>
         <div>
-          <div class="section-title"><h2>Ocorrências abertas</h2><small>${state.events.filter((event) => event.status === "aberto").length}</small></div>
+          <div class="section-title"><h2>Ocorrências abertas</h2><small>${state.events.filter(isEventOpen).length}</small></div>
           <div class="record-list">
-            ${state.events.filter((event) => event.status === "aberto").map(eventRecord).join("") || empty("Nenhuma ocorrência aberta.")}
+            ${state.events.filter(isEventOpen).map((event) => eventRecord(event)).join("") || empty("Nenhuma ocorrência aberta.")}
           </div>
         </div>
       </section>
@@ -2586,14 +2838,19 @@
         <div class="badge-row">
           <span class="badge ${expense.responsible === "proprietaria" ? "warn" : ""}">${h(expense.responsible === "proprietaria" ? "Proprietária" : "Motorista")}</span>
           <span class="badge">${h(dateLabel(expense.date))}</span>
-          ${expense.batchId ? `<span class="badge">${icon("car")}Despesa em lote</span>` : ""}
+          ${expense.batchId ? `<span class="badge">${icon("car")}Lote: ${money(state.expenses.filter((item) => item.batchId === expense.batchId).reduce((sum, item) => sum + Number(item.amount || 0), 0))} no total</span>` : ""}
         </div>
       </article>
     `;
   }
 
+  function eventStatusLabel(status) {
+    return { agendado: "Agendado", aberto: "Aberto", em_curso: "Aberto", resolvido: "Resolvido" }[status] || status || "—";
+  }
+
   function eventRecord(event, compact = false) {
     const tone = event.status === "resolvido" ? "ok" : "warn";
+    const open = isEventOpen(event);
     return `
       <article class="record">
         <div class="record-main">
@@ -2601,22 +2858,32 @@
             <strong>${h(eventLabel(event.type))}</strong>
             <small>${h(vehicleName(getVehicle(event.vehicleId)))} · ${h(driverName(getDriver(event.driverId)))}</small>
           </div>
-          ${compact ? "" : `<button class="icon-button" type="button" title="Remover" data-delete="event" data-id="${h(event.id)}">${icon("trash")}</button>`}
+          ${compact ? "" : `
+            <div class="detail-actions">
+              ${open ? `<button class="button secondary compact" type="button" data-action="resolve-event" data-id="${h(event.id)}">${icon("check")}Resolver</button>` : ""}
+              <button class="icon-button" type="button" title="Remover" data-delete="event" data-id="${h(event.id)}">${icon("trash")}</button>
+            </div>`}
         </div>
         <div class="badge-row">
-          <span class="badge ${tone}">${h(event.status)}</span>
+          <span class="badge ${tone}">${h(eventStatusLabel(event.status))}</span>
           ${event.amount ? `<span class="badge">${money(event.amount)}</span>` : ""}
-          ${event.immobilizeVehicle ? `<span class="badge danger">${icon("wrench")}Viatura imobilizada</span>` : ""}
+          ${event.immobilizeVehicle ? `<span class="badge danger">${icon("wrench")}${event.immobilizationApplied ? "Viatura imobilizada" : "Imobiliza no início"}</span>` : ""}
           ${event.releaseAssignment ? `<span class="badge warn">${icon("check")}Atribuição encerrada</span>` : ""}
-          <span class="badge">${h(dateTimeLabel(event.date))}</span>
+          <span class="badge">${icon("calendar")}${h(dateTimeLabel(event.startDate || event.date))}${event.endDate ? ` → ${h(dateTimeLabel(event.endDate))}` : open ? " → sem fim" : ""}</span>
         </div>
       </article>
     `;
   }
 
+  function documentOwnerLabel(doc) {
+    if (doc.scope === "driver") return driverName(getDriver(doc.driverId));
+    if (doc.scope === "vehicle") return vehicleName(getVehicle(doc.vehicleId));
+    return state.company.name;
+  }
+
   function documentRecord(doc) {
     const status = documentStatus(doc);
-    const owner = doc.scope === "driver" ? driverName(getDriver(doc.driverId)) : doc.scope === "vehicle" ? vehicleName(getVehicle(doc.vehicleId)) : state.company.name;
+    const owner = documentOwnerLabel(doc);
     return `
       <article class="record">
         <div class="record-main">
@@ -2638,6 +2905,10 @@
 
   function eventLabel(value) {
     const map = {
+      doenca: "Doença/baixa médica",
+      licenca: "Licença/férias",
+      manutencao: "Manutenção em oficina",
+      paragem_tecnica: "Paragem técnica",
       sinistro: "Acidente/sinistro",
       avaria: "Avaria",
       multa: "Multa",
@@ -2911,6 +3182,10 @@
       body: payload,
     });
 
+    if (response.status === 401) {
+      showLogin();
+      throw new Error("Sessão expirada. Entre novamente e repita o envio.");
+    }
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.error || "Não foi possível enviar o ficheiro.");
@@ -3052,7 +3327,7 @@
 
   function addExpense(data) {
     const vehicles = data.vehicleScope === "all"
-      ? state.vehicles.filter((vehicle) => vehicle.status !== "imobilizado")
+      ? expenseBatchVehicles()
       : [getVehicle(data.vehicleId)].filter(Boolean);
     if (!vehicles.length) {
       throw new Error("Escolha uma viatura válida para a despesa.");
@@ -3071,7 +3346,9 @@
       createdAt: new Date().toISOString(),
     }));
     persist();
-    toast(vehicles.length > 1 ? `Despesa aplicada a ${vehicles.length} viaturas.` : "Despesa guardada.");
+    toast(vehicles.length > 1
+      ? `Despesa aplicada a ${vehicles.length} viaturas (${money(vehicles.length * Number(data.amount || 0))} no total).`
+      : "Despesa guardada.");
   }
 
   function addEvent(data) {
@@ -3090,26 +3367,19 @@
       amount,
       status: data.status,
       immobilizeVehicle: Boolean(data.immobilizeVehicle),
+      // Explícito: sem este campo, normalizeEvent trata o registo como antigo (já imobilizado).
+      immobilizationApplied: false,
       exemptFromFee: Boolean(data.exemptFromFee),
       releaseAssignment: Boolean(data.releaseAssignment),
       notes: data.notes,
       createdAt: now,
     });
-    if (data.vehicleId && data.immobilizeVehicle) {
-      const activeAssignment = activeAssignmentForVehicle(data.vehicleId);
-      state.vehicles = state.vehicles.map((vehicle) => (
-        vehicle.id === data.vehicleId
-          ? { ...vehicle, status: "imobilizado", driverId: data.releaseAssignment ? "" : vehicle.driverId }
-          : vehicle
-      ));
-      if (data.releaseAssignment && activeAssignment) {
-        state.assignments = state.assignments.map((assignment) => (
-          assignment.id === activeAssignment.id ? closeOpenAssignment(assignment, now, "sinistro") : assignment
-        ));
-      }
-    }
+    const created = state.events[state.events.length - 1];
+    const startedNow = new Date(startDate).getTime() <= Date.now();
+    if (startedNow && isEventOpen(created)) applyImmobilization(created, now);
     persist();
-    toast(data.immobilizeVehicle ? "Ocorrência guardada e viatura imobilizada." : (data.exemptFromFee ? "Ocorrência guardada com isenção de entrega." : "Ocorrência guardada."));
+    const immobilizeLabel = startedNow ? "Ocorrência guardada e viatura imobilizada." : "Ocorrência agendada; a viatura será imobilizada no início.";
+    toast(data.immobilizeVehicle && data.status !== "resolvido" ? immobilizeLabel : (data.exemptFromFee ? "Ocorrência guardada com isenção de entrega." : "Ocorrência guardada."));
   }
 
   async function addDocument(data) {
@@ -3211,7 +3481,7 @@
       year: data.year,
       chassis: data.chassis,
       mileage: data.mileage,
-      driverId: data.driverId,
+      driverId: existing?.driverId || "",
       status: data.status,
       booklet: data.booklet,
       propertyTitle: data.propertyTitle,
@@ -3330,21 +3600,27 @@
     const key = labels[collection];
     if (!key) return;
     state[key] = state[key].filter((item) => item.id !== id);
+    // O histórico de atribuições mantém-se; só se encerra a atribuição ativa.
+    const endedAt = new Date().toISOString();
     if (collection === "vehicle") {
-      state.assignments = state.assignments.filter((assignment) => assignment.vehicleId !== id);
+      state.assignments = state.assignments.map((assignment) => (
+        assignment.vehicleId === id ? closeOpenAssignment(assignment, endedAt, "removida") : assignment
+      ));
     }
     if (collection === "driver") {
-      state.vehicles = state.vehicles.map((vehicle) => vehicle.driverId === id ? { ...vehicle, driverId: "" } : vehicle);
-      state.assignments = state.assignments.filter((assignment) => assignment.driverId !== id);
+      state.vehicles = state.vehicles.map((vehicle) => vehicle.driverId === id ? { ...vehicle, driverId: "", status: vehicle.status === "ativo" ? "parado" : vehicle.status } : vehicle);
+      state.assignments = state.assignments.map((assignment) => (
+        assignment.driverId === id ? closeOpenAssignment(assignment, endedAt, "removida") : assignment
+      ));
     }
     persist();
     toast("Registo removido.");
     render();
   }
 
-  function exportBackup() {
+  function exportBackup(suffix = "") {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-    downloadBlob(blob, `uhocha-controle-${toDateInput()}.json`);
+    downloadBlob(blob, `uhocha-controle-${toDateInput()}${typeof suffix === "string" && suffix ? `-${suffix}` : ""}.json`);
     toast("Cópia de segurança exportada.");
   }
 
@@ -3474,7 +3750,7 @@
     openFormModal("Ocorrências e Alertas", html);
   }
 
-  function confirmAction(title, text) {
+  function confirmAction(title, text, options = {}) {
     return new Promise((resolve) => {
       const template = document.querySelector("#confirmTemplate");
       const dialog = template.content.firstElementChild.cloneNode(true);
@@ -3484,6 +3760,11 @@
       }
       dialog.querySelector("h2").textContent = title;
       dialog.querySelector("p").textContent = text;
+      const cancelButton = dialog.querySelector("button[value='cancel']");
+      const confirmButton = dialog.querySelector("button[value='confirm']");
+      if (options.cancelLabel) cancelButton.textContent = options.cancelLabel;
+      if (options.confirmLabel) confirmButton.textContent = options.confirmLabel;
+      if (options.tone === "neutral") confirmButton.classList.remove("danger");
       document.body.append(dialog);
       dialog.addEventListener("close", () => {
         resolve(dialog.returnValue === "confirm");
@@ -3496,7 +3777,11 @@
   function bindEvents() {
     window.addEventListener("hashchange", () => setRoute(getRoute()));
 
-    document.querySelector("#backupButton").addEventListener("click", exportBackup);
+    document.querySelector("#backupButton").addEventListener("click", () => exportBackup());
+    document.querySelector("#logoutButton")?.addEventListener("click", logout);
+    window.addEventListener("online", () => {
+      if (syncMeta.pending) queueRemoteSync(0);
+    });
     document.querySelector("#themeButton").addEventListener("click", () => {
       state.theme = state.theme === "dark" ? "light" : "dark";
       persist();
@@ -3663,6 +3948,11 @@
         await captureResidenceLocation(action.closest("form"), action);
         return;
       }
+      if (action.dataset.action === "resolve-event") {
+        const ok = await confirmAction("Resolver ocorrência", "A ocorrência termina agora. A isenção deixa de contar a partir deste momento e a viatura é libertada se estava imobilizada.");
+        if (ok) resolveEvent(action.dataset.id);
+        return;
+      }
       if (action.dataset.action === "close-assignment") {
         const ok = await confirmAction("Encerrar atribuição", "A viatura será libertada e ficará marcada como parada.");
         if (ok) closeAssignment(action.dataset.id);
@@ -3725,6 +4015,7 @@
       if (event.target.matches("[data-expense-scope]")) {
         const vehicleCombo = event.target.form?.querySelector("[data-expense-vehicle]")?.closest(".field");
         if (vehicleCombo) vehicleCombo.hidden = event.target.value === "all";
+        syncExpenseTotal(event.target.form);
       }
 
       if (event.target.name === "vehicleId" && event.target.closest("form[data-form='event']")) {
@@ -3759,7 +4050,32 @@
       if (event.target.matches("[data-payment-group-amount]")) {
         syncPaymentJustification(event.target.closest("[data-payment-group-row]"));
       }
+      if (event.target.matches("[data-expense-amount]")) {
+        syncExpenseTotal(event.target.form);
+      }
     });
+  }
+
+  function expenseBatchVehicles() {
+    return state.vehicles.filter((vehicle) => vehicle.status !== "imobilizado");
+  }
+
+  // Despesa em lote: o valor introduzido é por viatura; mostra o total antes de gravar.
+  function syncExpenseTotal(form) {
+    if (!form) return;
+    const scope = form.querySelector("[data-expense-scope]")?.value || "single";
+    const amountInput = form.querySelector("[data-expense-amount]");
+    const wrap = form.querySelector("[data-expense-total]");
+    const text = form.querySelector("[data-expense-total-text]");
+    const label = amountInput?.closest(".field")?.querySelector("label");
+    const isBatch = scope === "all";
+    if (label) label.textContent = isBatch ? "Valor por viatura" : "Valor";
+    if (!wrap || !text) return;
+    wrap.hidden = !isBatch;
+    if (!isBatch) return;
+    const count = expenseBatchVehicles().length;
+    const amount = Number(amountInput?.value || 0);
+    text.textContent = `${count} viatura${count === 1 ? "" : "s"} × ${money(amount)} = ${money(count * amount)} no total`;
   }
 
   function closeCombos(except = null) {
@@ -3850,5 +4166,5 @@
   bindEvents();
   render();
   registerServiceWorker();
-  loadRemoteState();
+  startSession();
 })();
