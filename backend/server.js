@@ -6,6 +6,7 @@ import { mkdir, open, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createV1Router, runBillingJobs } from "./api/v1.ts";
 import { authMode, registerAuthRoutes, requireAuth } from "./auth.js";
 import { migrate, pool } from "./db.js";
 
@@ -61,6 +62,7 @@ const upload = multer({
 if (corsOrigins.length) {
   app.use(cors({ origin: corsOrigins, credentials: true }));
 }
+app.use("/api/v1", createV1Router());
 app.use(express.json({ limit: "10mb" }));
 registerAuthRoutes(app);
 app.use("/api/state", requireAuth);
@@ -274,6 +276,8 @@ app.use((error, _request, response, _next) => {
 
 await runMigrationsWithRetry();
 
+scheduleBillingJobs();
+
 app.listen(port, "0.0.0.0", () => {
   console.log(`UHOCHA backend ready on port ${port}`);
   if (authMode === "open") {
@@ -295,4 +299,18 @@ async function runMigrationsWithRetry(attempts = 10, delayMs = 2000) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
+}
+
+// Cobranças semanais e penalidades: corre no arranque e a cada 15 minutos (BILLING_JOBS=off desliga).
+function scheduleBillingJobs(intervalMs = 15 * 60 * 1000) {
+  if (process.env.BILLING_JOBS === "off") return;
+  const run = () => runBillingJobs(new Date())
+    .then((result) => {
+      if (!result.skipped && (result.chargesCreated || result.penaltiesChanged)) {
+        console.log(`Cobranças: ${result.chargesCreated} criada(s), ${result.penaltiesChanged} penalidade(s) atualizada(s).`);
+      }
+    })
+    .catch((error) => console.error("Falha na tarefa de cobranças:", error));
+  run();
+  setInterval(run, intervalMs).unref();
 }

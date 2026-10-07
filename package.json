@@ -15,16 +15,22 @@
     "db:backup": "node backend/backup.js",
     "test": "node --test \"backend/**/*.test.ts\"",
     "import:legacy": "node backend/import/import-legacy.ts",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "user:create": "node backend/cli/create-user.ts",
+    "test:integration": "dropdb --if-exists uhocha_it && createdb uhocha_it && DATABASE_URL=postgresql://localhost:5432/uhocha_it JWT_SECRET=teste node --test \"backend/**/*.it.ts\""
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "multer": "^2.1.1",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
     "@types/node": "^26.6.4",
     "@types/pg": "^8.23.1",
     "typescript": "^7.0.2"

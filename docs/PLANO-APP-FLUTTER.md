@@ -422,21 +422,21 @@ Decisões de implementação tomadas:
 Feito:
 - [x] Motor de cobranças puro (`backend/domain/charges.ts`) + 30 testes.
 - [x] Esquema normalizado (`002_dominio.sql`) e executor de migrações com bloqueio.
-- [x] Importador do estado antigo + relatório de discrepâncias (`npm run import:legacy -- --dry-run`) + 7 testes.
+- [x] Importador do estado antigo + relatório de discrepâncias (`npm run import:legacy -- --dry-run`) + 7 testes. Semanas importadas não recebem penalidades automáticas (marco `penalties_from`).
+- [x] Utilizadores admin/gestor/motorista: scrypt, JWT HS256 de 15 min + refresh token de 30 dias com rotação e deteção de reutilização, bloqueio após 5 falhas, convite do motorista por código de 6 dígitos (48h) + PIN.
+- [x] Serviços de cobrança na base: geração idempotente das semanas, penalidades 24h/72h (só sobem), pagamentos com alocação às semanas mais antigas, crédito aplicado a cobranças futuras, idempotência por `clientId`, extrato do motorista.
+- [x] API v1 (`/api/v1`): auth (login, refresh, logout, activate), `me`, `me/statement`, `users`, `drivers`, `drivers/:id/statement`, `drivers/:id/invite`, `charges`, `payments`, `admin/jobs/billing`. Tarefa de cobranças a cada 15 min com advisory lock. 11 testes de integração.
 
 A fazer:
-- [ ] Migrar para TypeScript, Zod, Drizzle/Kysely, migrações versionadas.
-- [ ] Auth (users, JWT, refresh, roles admin/gestor/motorista, código de ativação + PIN), filtro por `driver_id` em todas as rotas para motoristas.
-- [ ] Tabelas e CRUD de viaturas, motoristas, contactos, documentos, ficheiros autenticados.
-- [ ] Atribuições com constraints de unicidade; fecho com acerto.
-- [ ] Motor de cobranças: geração semanal (semana terminada), cálculo **por dias** (proporcional na 1.ª/última semana, desconto de dias parados), recálculo/ajuste, alocação de pagamentos, penalidades 24h/72h, alerta >72h.
-- [ ] Despesas em lote (por viatura / dividir total) com `expense_batches`.
-- [ ] Declarações de pagamento e ocorrências comunicadas por motoristas (estado pendente/validação).
-- [ ] Ocorrências com ciclo de vida e jobs (pg-boss).
-- [ ] Dashboard, alertas e relatórios calculados no servidor.
-- [ ] Auditoria por diff.
-- [ ] Script de migração do blob + relatório de discrepâncias.
-- [ ] Testes: unitários do motor de cobranças (casos: atribuição iniciada a uma quinta, devolução a um sábado, 2 dias parados a meio da semana, ocorrência criada depois de a cobrança estar paga → ajuste, pagamento de 3 semanas atrasadas, >72h, mudança da taxa semanal a meio do contrato) + integração da API + testes de isolamento (motorista A não vê dados de B).
+- [ ] CRUD de viaturas, motoristas, contactos e documentos; ficheiros autenticados (`/api/v1/files`).
+- [ ] Atribuir (assistente) e devolver viatura com acerto de contas e caução.
+- [ ] Ocorrências: criar/validar/resolver/cancelar, recálculo das cobranças afetadas (ajuste/crédito se já paga), imobilização automática.
+- [ ] Despesas e despesas em lote (por viatura / dividir total).
+- [ ] Declarações de pagamento do motorista (enviar comprovativo → gestor confirma/rejeita) e ocorrências comunicadas pelo motorista.
+- [ ] Anular pagamentos/cobranças com motivo (só admin) e auditoria por diff.
+- [ ] Dashboard, alertas (incl. > 72h e validade de documentos) e relatórios calculados no servidor.
+- [ ] `GET /sync/changes` para o modo offline; contrato OpenAPI para gerar o cliente Dart.
+- [ ] Teste de isolamento por motorista em todas as rotas novas; teste de mudança da taxa semanal a meio do contrato.
 - **Aceitação:** migração de uma cópia de produção reproduz os totais históricos (com discrepâncias explicadas); cobertura ≥80% no motor de cobranças.
 
 ### Fase 3 — Fundações Flutter (1 semana)

@@ -4,7 +4,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 
-const { Pool } = pg;
+const { Pool, types } = pg;
+
+// bigint (valores em kwanzas, contagens) como Number; datas "YYYY-MM-DD" como string (sem fuso).
+types.setTypeParser(20, (value) => Number(value));
+types.setTypeParser(1082, (value) => value);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const connectionString = process.env.DATABASE_URL || "postgresql://localhost:5432/uhocha_controle";

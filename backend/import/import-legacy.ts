@@ -95,6 +95,12 @@ async function main() {
           : plan.rows[table];
         await insertRows(client, table, rows);
       }
+      // Semanas importadas não recebem penalidades automáticas (ver relatório "penalidades não cobradas").
+      await client.query(
+        `INSERT INTO settings (key, value) VALUES ('penalties_from', to_jsonb($1::text))
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+        [plan.report.generatedAt],
+      );
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");

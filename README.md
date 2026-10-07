@@ -118,7 +118,10 @@ railway.toml     # config Railway
 - Requer Node ≥ 22.18 (executa `.ts` diretamente, sem compilação).
 - `npm test` — testes do motor de cobranças e do importador.
 - `npm run typecheck` — verificação de tipos.
-- `npm run import:legacy -- --dry-run` — gera em `backups/` um relatório da importação dos dados antigos (saldos por motorista, semanas em aberto, penalidades nunca cobradas, avisos) sem gravar nada. Sem `--dry-run` grava numa transação e recusa repetir.
+- `npm run test:integration` — testes da API v1 contra Postgres local (recria a base `uhocha_it`).
+- `npm run user:create -- --name "Nome" --email x@y.ao --role admin` — cria o primeiro administrador (palavra-passe em `USER_PASSWORD` ou gerada).
+- API v1 em `/api/v1` (Bearer token; `JWT_SECRET` obrigatório em produção). A tarefa de cobranças corre no arranque e a cada 15 min (`BILLING_JOBS=off` desliga).
+- `npm run import:legacy -- --dry-run` — gera em `backups/` um relatório da importação dos dados antigos (saldos por motorista, semanas em aberto, penalidades nunca cobradas, avisos) sem gravar nada. Sem `--dry-run` grava numa transação e recusa repetir. **Só importar no corte final**: depois disso, o PWA deixa de ser a fonte de verdade. As semanas importadas não recebem penalidades automáticas (`settings.penalties_from`).
 
 ### 6. Acesso e cópias de segurança
 
