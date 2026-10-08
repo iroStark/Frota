@@ -40,3 +40,30 @@ final myProfileProvider = FutureProvider.autoDispose<Cached<Map<String, dynamic>
   final driverId = ref.watch(sessionProvider).user?.driverId;
   return _cachedGet(ref, 'me_profile', '/drivers/$driverId', _map);
 });
+
+final driverStatementProvider = FutureProvider.autoDispose.family<Cached<Statement>, String>(
+  (ref, driverId) => _cachedGet(ref, 'statement_$driverId', '/drivers/$driverId/statement', (json) => Statement.fromJson(_map(json))),
+);
+
+final driverDetailProvider = FutureProvider.autoDispose.family<Cached<Map<String, dynamic>>, String>(
+  (ref, driverId) => _cachedGet(ref, 'driver_$driverId', '/drivers/$driverId', _map),
+);
+
+final pendingDeclarationsProvider = FutureProvider.autoDispose<Cached<List<Map<String, dynamic>>>>(
+  (ref) => _cachedGet(ref, 'declarations_pending', '/payment-declarations?status=pendente', _rows),
+);
+
+final incidentsToValidateProvider = FutureProvider.autoDispose<Cached<List<Map<String, dynamic>>>>(
+  (ref) => _cachedGet(ref, 'incidents_to_validate', '/incidents?status=por_validar', _rows),
+);
+
+/// Depois de registar dinheiro: tudo o que mostra saldos fica desatualizado.
+void invalidateMoney(WidgetRef ref, {String? driverId}) {
+  ref.invalidate(dashboardProvider);
+  ref.invalidate(driversProvider);
+  ref.invalidate(pendingDeclarationsProvider);
+  if (driverId != null) {
+    ref.invalidate(driverStatementProvider(driverId));
+    ref.invalidate(driverDetailProvider(driverId));
+  }
+}

@@ -327,7 +327,7 @@ export async function applyLatePenalties(db: Db, now: Date) {
          VALUES ('penalidade_atraso', $1, $2, $3, $4, $5, $6, $7, 'aberta', $8, $9)
          ON CONFLICT DO NOTHING`,
         [charge.driver_id, charge.vehicle_id, charge.assignment_id, charge.period_start, charge.period_end, now,
-          penalty.amount, charge.id, `Atraso na entrega da semana de ${charge.period_start}`],
+          penalty.amount, charge.id, "Entrega feita depois do prazo."],
       );
       changed += 1;
     } else if (Number(charge.penalty_amount) < penalty.amount) {

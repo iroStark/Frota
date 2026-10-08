@@ -6,59 +6,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:uhocha_frota/main.dart' as app;
 
+import 'helpers.dart';
+
 const demoLogin = String.fromEnvironment('DEMO_LOGIN');
 const demoPassword = String.fromEnvironment('DEMO_PASSWORD');
 const demoCode = String.fromEnvironment('DEMO_CODE');
 const demoPhone = String.fromEnvironment('DEMO_PHONE', defaultValue: '923000101');
 
-late IntegrationTestWidgetsFlutterBinding _binding;
-
-Future<void> waitFor(WidgetTester tester, Finder finder, {Duration timeout = const Duration(seconds: 20)}) async {
-  final end = DateTime.now().add(timeout);
-  while (DateTime.now().isBefore(end)) {
-    await tester.pump(const Duration(milliseconds: 200));
-    if (finder.evaluate().isNotEmpty) return;
-  }
-  // Ajuda a diagnosticar: captura do ecrã e textos visíveis no momento da falha.
-  await _binding.takeScreenshot('falha');
-  final texts = find.byType(Text).evaluate().map((element) => (element.widget as Text).data).whereType<String>().take(30).join(' | ');
-  throw TestFailure('Não apareceu: $finder\nNo ecrã: $texts');
-}
-
-/// Espera até aparecer um dos elementos e devolve o índice do primeiro encontrado.
-Future<int> waitForAny(WidgetTester tester, List<Finder> finders, {Duration timeout = const Duration(seconds: 20)}) async {
-  final end = DateTime.now().add(timeout);
-  while (DateTime.now().isBefore(end)) {
-    await tester.pump(const Duration(milliseconds: 200));
-    for (var index = 0; index < finders.length; index++) {
-      if (finders[index].evaluate().isNotEmpty) return index;
-    }
-  }
-  throw TestFailure('Nenhum apareceu: $finders');
-}
-
-Future<void> settle(WidgetTester tester) async {
-  for (var i = 0; i < 10; i++) {
-    await tester.pump(const Duration(milliseconds: 150));
-  }
-}
-
 void main() {
-  final binding = _binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final binding = testBinding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('gestor e motorista: entrar, navegar e sair', (tester) async {
     app.main();
     await binding.convertFlutterSurfaceToImage();
-    // A sessão de uma execução anterior pode ter ficado guardada (o Keychain sobrevive à reinstalação).
-    final start = await waitForAny(tester, [find.byKey(const Key('login')), find.byType(NavigationBar)]);
-    if (start == 1) {
-      await tester.tap(find.text(find.text('Perfil').evaluate().isNotEmpty ? 'Perfil' : 'Mais').last);
-      await waitFor(tester, find.text('Sair'));
-      await tester.scrollUntilVisible(find.text('Sair'), 200, scrollable: find.byType(Scrollable).last);
-      await tester.tap(find.text('Sair'));
-      await waitFor(tester, find.widgetWithText(FilledButton, 'Sair'));
-      await tester.tap(find.widgetWithText(FilledButton, 'Sair'));
-    }
+    await ensureSignedOut(tester);
     await waitFor(tester, find.byKey(const Key('login')));
     await settle(tester);
     await binding.takeScreenshot('01_login');

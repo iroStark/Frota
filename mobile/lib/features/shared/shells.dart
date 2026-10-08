@@ -16,7 +16,8 @@ class _Action {
 }
 
 const _staffActions = [
-  _Action(Icons.payments_outlined, 'Receber pagamento', '/em-breve?titulo=Receber pagamento'),
+  _Action(Icons.payments_outlined, 'Receber pagamento', '/pagamentos/receber'),
+  _Action(Icons.groups_outlined, 'Entrega em grupo', '/pagamentos/grupo'),
   _Action(Icons.receipt_outlined, 'Nova despesa', '/em-breve?titulo=Nova despesa'),
   _Action(Icons.report_outlined, 'Nova ocorrência', '/em-breve?titulo=Nova ocorrência'),
   _Action(Icons.key_outlined, 'Atribuir viatura', '/em-breve?titulo=Atribuir viatura'),
@@ -24,7 +25,7 @@ const _staffActions = [
 ];
 
 const _driverActions = [
-  _Action(Icons.receipt_long_outlined, 'Enviar comprovativo', '/em-breve?titulo=Enviar comprovativo'),
+  _Action(Icons.receipt_long_outlined, 'Enviar comprovativo', '/m/comprovativo'),
   _Action(Icons.car_crash_outlined, 'Comunicar ocorrência', '/em-breve?titulo=Comunicar ocorrência'),
 ];
 

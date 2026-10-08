@@ -60,26 +60,33 @@ class SessionController extends Notifier<SessionState> {
     return const SessionState(SessionStatus.loading);
   }
 
-  /// No arranque: renova a sessão guardada. Sem rede, entra com o perfil guardado (modo leitura).
+  /// No arranque: renova a sessão guardada. Sem rede (ou servidor lento), entra com o perfil
+  /// guardado em modo leitura. Qualquer falha inesperada leva ao ecrã de entrada — nunca fica
+  /// presa no carregamento.
   Future<void> restore() async {
-    final savedUser = await _tokens.readUser();
-    if (savedUser == null || await _tokens.readRefreshToken() == null) {
-      state = const SessionState(SessionStatus.signedOut);
-      return;
-    }
-    var offline = false;
     try {
-      if (!await _api.refreshSession()) {
-        await _tokens.clear();
+      final savedUser = await _tokens.readUser();
+      if (savedUser == null || await _tokens.readRefreshToken() == null) {
         state = const SessionState(SessionStatus.signedOut);
         return;
       }
+      var offline = false;
+      try {
+        final valid = await _api.refreshSession().timeout(const Duration(seconds: 8));
+        if (!valid) {
+          await _tokens.clear();
+          state = const SessionState(SessionStatus.signedOut);
+          return;
+        }
+      } catch (_) {
+        offline = true;
+      }
+      final user = AppUser.fromJson((await _tokens.readUser()) ?? savedUser);
+      final locked = await _tokens.biometricLockEnabled();
+      state = SessionState(locked ? SessionStatus.locked : SessionStatus.signedIn, user: user, offline: offline);
     } catch (_) {
-      offline = true;
+      state = const SessionState(SessionStatus.signedOut);
     }
-    final user = AppUser.fromJson((await _tokens.readUser()) ?? savedUser);
-    final locked = await _tokens.biometricLockEnabled();
-    state = SessionState(locked ? SessionStatus.locked : SessionStatus.signedIn, user: user, offline: offline);
   }
 
   Future<void> login(String login, String password) async {

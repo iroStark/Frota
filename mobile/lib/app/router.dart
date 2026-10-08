@@ -5,6 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../core/auth/session.dart';
 import '../features/auth/auth_screens.dart';
 import '../features/driver/driver_screens.dart';
+import '../features/driver/send_proof_screen.dart';
+import '../features/payments/group_payment_screen.dart';
+import '../features/payments/receive_payment_screen.dart';
+import '../features/payments/review_screen.dart';
+import '../features/staff/driver_detail_screen.dart';
 import '../features/shared/shells.dart';
 import '../features/staff/staff_screens.dart';
 
@@ -37,7 +42,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final home = session.user!.isStaff ? '/inicio' : '/m/inicio';
           if (path == '/' || publicPaths.contains(path) || path == '/desbloquear') return home;
           final inDriverArea = path.startsWith('/m/');
-          final inStaffArea = ['/inicio', '/cobrancas', '/frota', '/mais', '/alertas'].any(path.startsWith);
+          final inStaffArea = ['/inicio', '/cobrancas', '/frota', '/mais', '/alertas', '/pagamentos', '/validar', '/motoristas'].any(path.startsWith);
           if (session.user!.isStaff && inDriverArea) return home;
           if (!session.user!.isStaff && inStaffArea) return home;
           return null;
@@ -49,6 +54,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/ativar', builder: (_, _) => const ActivateScreen()),
       GoRoute(path: '/desbloquear', builder: (_, _) => const UnlockScreen()),
       GoRoute(path: '/alertas', builder: (_, _) => const AlertsScreen()),
+      GoRoute(path: '/validar', builder: (_, _) => const ReviewScreen()),
+      GoRoute(path: '/pagamentos/receber', builder: (_, state) => ReceivePaymentScreen(driverId: state.uri.queryParameters['motorista'])),
+      GoRoute(path: '/pagamentos/grupo', builder: (_, _) => const GroupPaymentScreen()),
+      GoRoute(path: '/motoristas/:id', builder: (_, state) => DriverDetailScreen(driverId: state.pathParameters['id']!)),
+      GoRoute(path: '/m/comprovativo', builder: (_, _) => const SendProofScreen()),
       GoRoute(path: '/em-breve', builder: (_, state) => ComingSoonScreen(title: state.uri.queryParameters['titulo'] ?? 'Em breve')),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => AppShell(shell: shell, isStaff: true),

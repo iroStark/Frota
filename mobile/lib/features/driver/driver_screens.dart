@@ -7,7 +7,7 @@ import '../../core/format/format.dart';
 import '../../core/widgets/widgets.dart';
 import '../shared/models.dart';
 import '../shared/providers.dart';
-import '../staff/staff_screens.dart' show chargeStatusLabel, chargeTone;
+import '../shared/statement_view.dart';
 
 const _documentLabels = {
   'bilhete_identidade': 'Bilhete de Identidade',
@@ -122,59 +122,13 @@ class DriverHomeScreen extends ConsumerWidget {
   }
 }
 
-List<String> _chargeDetails(StatementCharge charge) => [
-      if (charge.calculation != null) charge.calculation!.summary,
-      if (charge.calculation != null && charge.calculation!.chargedDays != charge.calculation!.workingDays)
-        '${charge.calculation!.chargedDays} × ${formatKz(charge.calculation!.dailyRate)}',
-      if (charge.description != null) charge.description!,
-      if (charge.outstanding > 0 && charge.status != 'isenta') 'Falta ${formatKz(charge.outstanding)}',
-    ];
-
 class DriverPaymentsScreen extends ConsumerWidget {
   const DriverPaymentsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
         appBar: AppBar(title: const Text('Pagamentos')),
-        body: CachedBody<Statement>(
-          provider: myStatementProvider,
-          builder: (context, statement) {
-            final now = DateTime.now();
-            return [
-              Row(children: [
-                Expanded(child: KpiCard(label: 'Saldo', value: formatKz(statement.balance), highlight: statement.balance <= 0)),
-                const SizedBox(width: 12),
-                Expanded(child: KpiCard(label: 'Pago no total', value: formatKz(statement.paid))),
-              ]),
-              const SectionHeader('Cobranças'),
-              if (statement.charges.isEmpty) const EmptyState('Ainda sem cobranças.'),
-              ...statement.charges.map((charge) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Card(
-                      child: ListTile(
-                        title: Text(charge.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(_chargeDetails(charge).join('\n')),
-                        isThreeLine: _chargeDetails(charge).length > 1,
-                        trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-                          Text(formatKz(charge.amount), style: const TextStyle(fontWeight: FontWeight.w700)),
-                          const SizedBox(height: 4),
-                          StatusChip(chargeStatusLabel(charge.status), tone: chargeTone(charge.status, overdue: charge.dueAt.isBefore(now))),
-                        ]),
-                      ),
-                    ),
-                  )),
-              const SectionHeader('Pagamentos recebidos'),
-              if (statement.payments.isEmpty) const EmptyState('Ainda sem pagamentos.'),
-              ...statement.payments.map((payment) => Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.check_circle, color: Brand.ok),
-                      title: Text(formatKz(payment.amount), style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text('${formatDateTime(payment.receivedAt)}${payment.reference != null ? ' · ${payment.reference}' : ''}'),
-                    ),
-                  )),
-            ];
-          },
-        ),
+        body: CachedBody<Statement>(provider: myStatementProvider, builder: statementWidgets),
       );
 }
 

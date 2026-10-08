@@ -19,6 +19,7 @@ dependencies:
   intl: ^0.20.2
   local_auth: ^3.0.2
   path_provider: ^2.1.6
+  share_plus: ^13.3.1
   url_launcher: ^6.3.3
   uuid: ^4.6.0
 
@@ -29,8 +30,19 @@ dev_dependencies:
   mocktail: ^1.0.5
   integration_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
   assets:
     - assets/logo.png
+
+# Ícone da app: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: assets/logo.png
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  background_color_ios: "#FFFFFF"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/logo.png

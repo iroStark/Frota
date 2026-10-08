@@ -8,28 +8,13 @@ import '../../core/format/format.dart';
 import '../../core/widgets/widgets.dart';
 import '../shared/models.dart';
 import '../shared/providers.dart';
+import '../shared/statement_view.dart';
 
 Tone _severityTone(String severity) => switch (severity) {
       'danger' => Tone.danger,
       'warn' => Tone.warn,
       _ => Tone.info,
     };
-
-Tone chargeTone(String status, {bool overdue = false}) => switch (status) {
-      'paga' => Tone.ok,
-      'isenta' => Tone.neutral,
-      'parcial' => Tone.warn,
-      _ => overdue ? Tone.danger : Tone.warn,
-    };
-
-String chargeStatusLabel(String status) => const {
-      'aberta': 'Em falta',
-      'parcial': 'Parcial',
-      'paga': 'Paga',
-      'isenta': 'Isenta',
-      'anulada': 'Anulada',
-    }[status] ??
-    status;
 
 class StaffHomeScreen extends ConsumerWidget {
   const StaffHomeScreen({super.key});
@@ -56,7 +41,7 @@ class StaffHomeScreen extends ConsumerWidget {
                 title: const Text('Para validar'),
                 subtitle: Text('${data.declarationsToReview} comprovativo(s) · ${data.incidentsToReview} ocorrência(s)'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/em-breve?titulo=Para validar'),
+                onTap: () => context.push('/validar'),
               ),
             ),
           ],
@@ -174,7 +159,11 @@ class _AlertTile extends StatelessWidget {
           leading: Icon(alert.severity == 'info' ? Icons.info_outline : Icons.warning_amber_rounded, color: color),
           title: Text(alert.title, style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Text(alert.detail),
-          onTap: alert.targetType == 'driver' ? () => context.push('/em-breve?titulo=${Uri.encodeComponent(alert.title)}') : null,
+          onTap: alert.targetType == 'driver' && alert.targetId != null
+              ? () => context.push('/motoristas/${alert.targetId}')
+              : alert.kind == 'comprovativos' || alert.kind == 'ocorrencias'
+                  ? () => context.push('/validar')
+                  : null,
         ),
       ),
     );
@@ -202,7 +191,14 @@ class ChargesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-        appBar: AppBar(title: const Text('Cobranças')),
+        appBar: AppBar(title: const Text('Cobranças'), actions: [
+          IconButton(tooltip: 'Entrega em grupo', onPressed: () => context.push('/pagamentos/grupo'), icon: const Icon(Icons.groups_outlined)),
+        ]),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => context.push('/pagamentos/receber'),
+          icon: const Icon(Icons.payments_outlined),
+          label: const Text('Receber'),
+        ),
         body: CachedBody<Dashboard>(
           provider: dashboardProvider,
           builder: (context, data) {
@@ -223,6 +219,7 @@ class ChargesScreen extends ConsumerWidget {
                             ? 'Falta ${formatKz(charge.outstanding)} de ${formatKz(charge.amount)}'
                             : formatKz(charge.amount)),
                         trailing: StatusChip(chargeStatusLabel(charge.status), tone: chargeTone(charge.status, overdue: charge.dueAt.isBefore(now))),
+                        onTap: () => context.push(charge.outstanding > 0 ? '/pagamentos/receber?motorista=${charge.driverId}' : '/motoristas/${charge.driverId}'),
                       ),
                     ),
                   )),
@@ -330,6 +327,7 @@ class _DriverTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Card(
         child: ListTile(
+          onTap: () => context.push('/motoristas/${row['id']}'),
           leading: Avatar('${row['name']}'),
           title: Text('${row['name']}', style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Text(row['plate'] != null ? '${row['brand']} ${row['model']} · ${row['plate']}' : 'Sem viatura'),

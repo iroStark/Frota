@@ -133,7 +133,18 @@ class StatementCharge {
   final ChargeCalculation? calculation;
 
   int get outstanding => amount - paid;
-  String get title => kind == 'semanal' && periodStart != null ? 'Semana ${formatWeek(periodStart!)}' : chargeKindLabels[kind] ?? kind;
+
+  /// Só para testes: volta ao formato da API.
+  Map<String, dynamic> toJsonForTest() => {
+        'id': id, 'kind': kind, 'period_start': periodStart, 'due_at': dueAt.toIso8601String(),
+        'amount': amount, 'paid': paid, 'status': status, 'description': description,
+      };
+
+  String get title {
+    if (kind == 'semanal' && periodStart != null) return 'Semana ${formatWeek(periodStart!)}';
+    final label = chargeKindLabels[kind] ?? kind;
+    return periodStart != null ? '$label · semana ${formatDay(periodStart!)}' : label;
+  }
 }
 
 class StatementPayment {

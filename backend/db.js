@@ -31,6 +31,12 @@ const MIGRATION_LOCK_ID = 727274; // pg_advisory_lock: impede duas instâncias d
 
 // Aplica por ordem os ficheiros NNN_nome.sql ainda não registados em schema_migrations,
 // cada um na sua transação.
+// Ligações inativas podem ser terminadas pelo Postgres (reinício, manutenção, failover).
+// Sem este handler o "error" do pool não é tratado e o Node termina o processo inteiro.
+pool.on("error", (error) => {
+  console.error("Ligação ao Postgres perdida (o pool volta a ligar no próximo pedido):", error.message);
+});
+
 export async function migrate({ log = console.log } = {}) {
   const client = await pool.connect();
   try {

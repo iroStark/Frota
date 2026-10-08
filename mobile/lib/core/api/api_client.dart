@@ -82,6 +82,33 @@ class ApiClient {
 
   Future<T> delete<T>(String path) => _call(() => dio.delete<T>(path));
 
+  /// Envia um ficheiro (foto/PDF) e devolve o id em `/files`.
+  Future<String> uploadFile(String filePath, {String category = 'documento', String? fileName}) async {
+    final name = fileName ?? filePath.split('/').last;
+    final form = FormData.fromMap({
+      'category': category,
+      'file': await MultipartFile.fromFile(filePath, filename: name, contentType: _mediaType(name)),
+    });
+    final data = await _call(() => dio.post<Map<String, dynamic>>('/files', data: form));
+    return data['id'] as String;
+  }
+
+  static DioMediaType _mediaType(String name) {
+    final ext = name.split('.').last.toLowerCase();
+    return switch (ext) {
+      'pdf' => DioMediaType('application', 'pdf'),
+      'png' => DioMediaType('image', 'png'),
+      'webp' => DioMediaType('image', 'webp'),
+      'heic' => DioMediaType('image', 'heic'),
+      _ => DioMediaType('image', 'jpeg'),
+    };
+  }
+
+  /// URL de um ficheiro protegido (usar com [authHeaders]).
+  String fileUrl(String fileId) => '${dio.options.baseUrl}/files/$fileId';
+
+  Map<String, String> get authHeaders => {if (tokens.accessToken != null) 'Authorization': 'Bearer ${tokens.accessToken}'};
+
   Future<T> _call<T>(Future<Response<T>> Function() request) async {
     try {
       return (await request()).data as T;

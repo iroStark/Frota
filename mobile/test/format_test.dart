@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:uhocha_frota/core/format/format.dart';
+import 'package:uhocha_frota/features/payments/common.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('pt_PT'));
@@ -30,5 +31,13 @@ void main() {
     expect(greeting(DateTime.utc(2026, 10, 5, 7)), 'Bom dia');
     expect(greeting(DateTime.utc(2026, 10, 5, 13)), 'Boa tarde');
     expect(greeting(DateTime.utc(2026, 10, 5, 20)), 'Boa noite');
+  });
+
+  test('valores escritos com separador de milhares', () {
+    final formatter = KzInputFormatter();
+    final value = formatter.formatEditUpdate(TextEditingValue.empty, const TextEditingValue(text: '1300000'));
+    expect(value.text, '1\u00A0300\u00A0000');
+    expect(parseKz(value.text), 1300000);
+    expect(parseKz(''), 0);
   });
 }
