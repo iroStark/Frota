@@ -4,7 +4,8 @@ import { z } from "zod";
 import { pool } from "../../db.js";
 import { HttpError, parse, route } from "../../lib/http.ts";
 import { normalizePhone } from "../../services/auth.ts";
-import { driverStatement } from "../../services/billing.ts";
+import { localDateOf } from "../../domain/time.ts";
+import { driverStatement, rulesAt } from "../../services/billing.ts";
 import { refreshVehicleStatus } from "../../services/fleet.ts";
 import {
   type Db, assertDriverAccess, audit, isoDate, kz, notFound, optionalText, staff, updateColumns, uuid, withClient, withTransaction,
@@ -98,6 +99,13 @@ export const DOCUMENT_SELECT = `
   FROM documents d`;
 
 export function registerFleetRoutes(router: Router) {
+  // --- regras do contrato em vigor (valores sugeridos na app) --------------------------------
+  router.get("/contract-rules/current", staff, route(async (_request, response) => {
+    const today = localDateOf(Date.now(), 60);
+    const current = await withClient((db) => rulesAt(db, today));
+    response.json({ effectiveOn: today, weeklyFee: current.weeklyFee, ...current.extra, rules: current.rules });
+  }));
+
   // --- viaturas ------------------------------------------------------------------------------
   router.get("/vehicles", staff, route(async (request, response) => {
     const query = parse(z.object({

@@ -104,3 +104,82 @@ class AuthImage extends ConsumerWidget {
     );
   }
 }
+
+/// Várias fotos (ex.: os 4 lados da viatura na entrega). Toca em "+" para juntar; toca numa para remover.
+class MultiPhotoField extends StatelessWidget {
+  const MultiPhotoField({super.key, required this.label, required this.photos, required this.onChanged, this.max = 8});
+
+  final String label;
+  final List<XFile> photos;
+  final ValueChanged<List<XFile>> onChanged;
+  final int max;
+
+  Future<void> _add(BuildContext context) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('Tirar foto'), onTap: () => Navigator.pop(context, ImageSource.camera)),
+          ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Escolher da galeria'), onTap: () => Navigator.pop(context, ImageSource.gallery)),
+        ]),
+      ),
+    );
+    if (source == null) return;
+    try {
+      final picker = ImagePicker();
+      final picked = source == ImageSource.gallery
+          ? await picker.pickMultiImage(maxWidth: 1600, maxHeight: 1600, imageQuality: 80, limit: max - photos.length)
+          : [?await picker.pickImage(source: source, maxWidth: 1600, maxHeight: 1600, imageQuality: 80)];
+      if (picked.isNotEmpty) onChanged([...photos, ...picked].take(max).toList());
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Não foi possível abrir a câmara ou a galeria.')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('$label (${photos.length}/$max)', style: Theme.of(context).textTheme.titleSmall),
+      const SizedBox(height: 8),
+      SizedBox(
+        height: 92,
+        child: ListView(scrollDirection: Axis.horizontal, children: [
+          for (final (index, photo) in photos.indexed)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: GestureDetector(
+                onTap: () => onChanged([...photos]..removeAt(index)),
+                child: Stack(children: [
+                  ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(photo.path), width: 92, height: 92, fit: BoxFit.cover)),
+                  const Positioned(right: 4, top: 4, child: CircleAvatar(radius: 11, child: Icon(Icons.close, size: 14))),
+                ]),
+              ),
+            ),
+          if (photos.length < max)
+            InkWell(
+              onTap: () => _add(context),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 92,
+                decoration: BoxDecoration(border: Border.all(color: Theme.of(context).colorScheme.outlineVariant), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.add_a_photo_outlined),
+              ),
+            ),
+        ]),
+      ),
+    ]);
+  }
+}
+
+/// Envia várias fotos e devolve os ids.
+Future<List<String>> uploadAll(WidgetRef ref, List<XFile> photos, String category) async {
+  final api = ref.read(apiProvider);
+  final ids = <String>[];
+  for (final photo in photos) {
+    ids.add(await api.uploadFile(photo.path, category: category));
+  }
+  return ids;
+}

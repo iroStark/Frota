@@ -67,3 +67,23 @@ void invalidateMoney(WidgetRef ref, {String? driverId}) {
     ref.invalidate(driverDetailProvider(driverId));
   }
 }
+
+final vehicleDetailProvider = FutureProvider.autoDispose.family<Cached<Map<String, dynamic>>, String>(
+  (ref, vehicleId) => _cachedGet(ref, 'vehicle_$vehicleId', '/vehicles/$vehicleId', _map),
+);
+
+final contractRulesProvider = FutureProvider.autoDispose<Cached<Map<String, dynamic>>>(
+  (ref) => _cachedGet(ref, 'contract_rules', '/contract-rules/current', _map),
+);
+
+/// Depois de mexer na frota (viaturas, motoristas, atribuições).
+void invalidateFleet(WidgetRef ref, {String? vehicleId, String? driverId}) {
+  ref.invalidate(vehiclesProvider);
+  ref.invalidate(driversProvider);
+  ref.invalidate(dashboardProvider);
+  if (vehicleId != null) ref.invalidate(vehicleDetailProvider(vehicleId));
+  if (driverId != null) {
+    ref.invalidate(driverDetailProvider(driverId));
+    ref.invalidate(driverStatementProvider(driverId));
+  }
+}

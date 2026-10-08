@@ -455,13 +455,17 @@ A fazer (antes do corte):
 - Decisões: modelos escritos à mão (sem freezed/codegen) e cache em ficheiros JSON; a base local `drift` fica para a fila offline da Fase 6.
 - Pendente do lado do ambiente: Android *cmdline-tools* + licenças; CI (GitHub Actions) para `flutter analyze/test`.
 
-### Fase 4 — Núcleo operacional (2,5 semanas)
-- [ ] Início (dashboard) e Alertas.
-- [ ] Cobranças da semana + Receber pagamento (individual e grupo) + recibo PDF/partilha.
-- [ ] Conta corrente do motorista.
-- [ ] Frota: listas, detalhe e cadastro (assistentes) de viaturas e motoristas, com câmara.
-- [ ] Atribuir e Devolver viatura.
-- **Aceitação:** um gestor consegue fazer a "segunda-feira de cobrança" completa só pelo telemóvel.
+### Fase 4 — Núcleo operacional ✅ (ramo `fase-4-cobranca`)
+- [x] Receber pagamento (motorista que deve primeiro, valor sugerido, pré-visualização das semanas pagas e do crédito, foto do comprovativo) e entrega em grupo.
+- [x] Para validar: comprovativos (ver foto, confirmar/ajustar valor, rejeitar com motivo) e ocorrências comunicadas (validar com dias parados/imobilização, recusar).
+- [x] Ficha do motorista: ligar/WhatsApp, convite para a app (código partilhável por WhatsApp), conta corrente com o cálculo por dias.
+- [x] Motorista: enviar comprovativo com foto.
+- [x] Registar/editar viaturas e motoristas (3 passos, contactos de emergência, caução).
+- [x] Ficha da viatura (estado, motorista, documentos, despesas, ocorrências, histórico).
+- [x] Atribuir viatura (3 passos: viatura+motorista livres, condições com taxa diária, checklist de entrega com combustível e fotos) e devolver (checklist, danos, fotos, uso da caução e acerto).
+- [x] Testes de integração no simulador: `app_flow_test`, `cobranca_test`, `frota_test` (com capturas de cada passo).
+- Corrigido pelo caminho: servidor caía quando o Postgres terminava ligações; app podia ficar presa no arranque; vários erros de interface só visíveis a correr a app.
+- Recibo em PDF partilhável fica para a Fase 6 (relatórios/exportação).
 
 ### Fase 5 — Operações complementares (1,5 semanas)
 - [ ] Ocorrências (criar, pré-visualizar impacto, resolver, anexos).

@@ -63,7 +63,14 @@ class DriverDetailScreen extends ConsumerWidget {
     final detail = ref.watch(driverDetailProvider(driverId));
     final name = detail.value?.data['name'] as String?;
     return Scaffold(
-      appBar: AppBar(title: Text(name ?? 'Motorista')),
+      appBar: AppBar(title: Text(name ?? 'Motorista'), actions: [
+        if (detail.value != null)
+          IconButton(
+            tooltip: 'Editar',
+            onPressed: () => context.push('/motoristas/$driverId/editar', extra: detail.value!.data),
+            icon: const Icon(Icons.edit_outlined),
+          ),
+      ]),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/pagamentos/receber?motorista=$driverId'),
         icon: const Icon(Icons.payments_outlined),
@@ -85,6 +92,10 @@ class DriverDetailScreen extends ConsumerWidget {
                     leading: Avatar('${driver['name']}', radius: 24),
                     title: Text('${driver['name']}', style: const TextStyle(fontWeight: FontWeight.w700)),
                     subtitle: Text(assignment == null ? 'Sem viatura' : '${assignment['brand']} ${assignment['model']} · ${assignment['plate'] ?? ''}'),
+                    trailing: assignment == null
+                        ? TextButton(onPressed: () => context.push('/atribuir?motorista=$driverId'), child: const Text('Atribuir'))
+                        : const Icon(Icons.chevron_right),
+                    onTap: assignment == null ? null : () => context.push('/viaturas/${assignment['vehicle_id']}'),
                   ),
                   if (phone != null)
                     Row(children: [

@@ -247,6 +247,12 @@ class _FleetScreenState extends ConsumerState<FleetScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Frota')),
+      floatingActionButton: FloatingActionButton.extended(
+        key: const Key('fleet_add'),
+        onPressed: () => context.push(_tab == 0 ? '/viaturas/nova' : '/motoristas/novo'),
+        icon: const Icon(Icons.add),
+        label: Text(_tab == 0 ? 'Nova viatura' : 'Novo motorista'),
+      ),
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
@@ -304,6 +310,7 @@ class _VehicleTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Card(
         child: ListTile(
+          onTap: () => context.push('/viaturas/${row['id']}'),
           leading: const CircleAvatar(child: Icon(Icons.local_taxi)),
           title: Text('${row['brand']} ${row['model']}', style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Text([row['plate'] ?? 'Sem matrícula', row['driver_name'] ?? 'Sem motorista'].join(' · ')),

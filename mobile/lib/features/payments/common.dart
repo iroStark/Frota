@@ -28,12 +28,13 @@ String groupKz(int value) => formatKz(value).replaceAll('\u00A0Kz', '');
 
 /// Campo de valor em kwanzas (só dígitos, com separador de milhares).
 class KzField extends StatelessWidget {
-  const KzField({super.key, required this.controller, this.label = 'Valor recebido', this.onChanged, this.fieldKey});
+  const KzField({super.key, required this.controller, this.label = 'Valor recebido', this.onChanged, this.fieldKey, this.allowZero = false});
 
   final TextEditingController controller;
   final String label;
   final ValueChanged<String>? onChanged;
   final Key? fieldKey;
+  final bool allowZero;
 
   @override
   Widget build(BuildContext context) => TextFormField(
@@ -44,7 +45,7 @@ class KzField extends StatelessWidget {
         style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         decoration: InputDecoration(labelText: label, suffixText: 'Kz'),
         onChanged: onChanged,
-        validator: (value) => parseKz(value ?? '') <= 0 ? 'Indique um valor maior que zero.' : null,
+        validator: (value) => !allowZero && parseKz(value ?? '') <= 0 ? 'Indique um valor maior que zero.' : null,
       );
 }
 

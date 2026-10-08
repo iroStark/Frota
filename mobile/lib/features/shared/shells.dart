@@ -20,7 +20,7 @@ const _staffActions = [
   _Action(Icons.groups_outlined, 'Entrega em grupo', '/pagamentos/grupo'),
   _Action(Icons.receipt_outlined, 'Nova despesa', '/em-breve?titulo=Nova despesa'),
   _Action(Icons.report_outlined, 'Nova ocorrência', '/em-breve?titulo=Nova ocorrência'),
-  _Action(Icons.key_outlined, 'Atribuir viatura', '/em-breve?titulo=Atribuir viatura'),
+  _Action(Icons.key_outlined, 'Atribuir viatura', '/atribuir'),
   _Action(Icons.upload_file_outlined, 'Novo documento', '/em-breve?titulo=Novo documento'),
 ];
 

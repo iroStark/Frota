@@ -6,12 +6,23 @@ import '../core/auth/session.dart';
 import '../features/auth/auth_screens.dart';
 import '../features/driver/driver_screens.dart';
 import '../features/driver/send_proof_screen.dart';
+import '../features/fleet/assign_screen.dart';
+import '../features/fleet/driver_form_screen.dart';
+import '../features/fleet/return_screen.dart';
+import '../features/fleet/vehicle_detail_screen.dart';
+import '../features/fleet/vehicle_form_screen.dart';
 import '../features/payments/group_payment_screen.dart';
 import '../features/payments/receive_payment_screen.dart';
 import '../features/payments/review_screen.dart';
 import '../features/staff/driver_detail_screen.dart';
 import '../features/shared/shells.dart';
 import '../features/staff/staff_screens.dart';
+
+/// Dados passados entre ecrãs (`extra`): vêm muitas vezes de JSON como `Map<dynamic, dynamic>`.
+Map<String, dynamic>? _extraMap(GoRouterState state) {
+  final extra = state.extra;
+  return extra is Map ? Map<String, dynamic>.from(extra) : null;
+}
 
 /// Notifica o GoRouter quando a sessão muda, para reavaliar o redirecionamento.
 class _SessionListenable extends ChangeNotifier {
@@ -42,7 +53,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final home = session.user!.isStaff ? '/inicio' : '/m/inicio';
           if (path == '/' || publicPaths.contains(path) || path == '/desbloquear') return home;
           final inDriverArea = path.startsWith('/m/');
-          final inStaffArea = ['/inicio', '/cobrancas', '/frota', '/mais', '/alertas', '/pagamentos', '/validar', '/motoristas'].any(path.startsWith);
+          final inStaffArea = ['/inicio', '/cobrancas', '/frota', '/mais', '/alertas', '/pagamentos', '/validar', '/motoristas', '/viaturas', '/atribuir', '/devolver'].any(path.startsWith);
           if (session.user!.isStaff && inDriverArea) return home;
           if (!session.user!.isStaff && inStaffArea) return home;
           return null;
@@ -57,7 +68,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/validar', builder: (_, _) => const ReviewScreen()),
       GoRoute(path: '/pagamentos/receber', builder: (_, state) => ReceivePaymentScreen(driverId: state.uri.queryParameters['motorista'])),
       GoRoute(path: '/pagamentos/grupo', builder: (_, _) => const GroupPaymentScreen()),
+      GoRoute(path: '/motoristas/novo', builder: (_, _) => const DriverFormScreen()),
       GoRoute(path: '/motoristas/:id', builder: (_, state) => DriverDetailScreen(driverId: state.pathParameters['id']!)),
+      GoRoute(path: '/motoristas/:id/editar', builder: (_, state) => DriverFormScreen(driver: _extraMap(state))),
+      GoRoute(path: '/viaturas/nova', builder: (_, _) => const VehicleFormScreen()),
+      GoRoute(path: '/viaturas/:id', builder: (_, state) => VehicleDetailScreen(vehicleId: state.pathParameters['id']!)),
+      GoRoute(path: '/viaturas/:id/editar', builder: (_, state) => VehicleFormScreen(vehicle: _extraMap(state))),
+      GoRoute(
+        path: '/atribuir',
+        builder: (_, state) => AssignScreen(vehicleId: state.uri.queryParameters['viatura'], driverId: state.uri.queryParameters['motorista']),
+      ),
+      GoRoute(path: '/devolver', builder: (_, state) => ReturnScreen(assignment: _extraMap(state)!)),
       GoRoute(path: '/m/comprovativo', builder: (_, _) => const SendProofScreen()),
       GoRoute(path: '/em-breve', builder: (_, state) => ComingSoonScreen(title: state.uri.queryParameters['titulo'] ?? 'Em breve')),
       StatefulShellRoute.indexedStack(
