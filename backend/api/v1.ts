@@ -3,6 +3,7 @@ import express, { Router } from "express";
 import { HttpError, errorHandler } from "../lib/http.ts";
 import { applyLatePenalties, generateWeeklyCharges } from "../services/billing.ts";
 import { syncIncidentStates } from "../services/fleet.ts";
+import { runScheduledNotices } from "../services/notify.ts";
 import { authenticate, requireRole, withTransaction } from "./context.ts";
 import { registerAccountRoutes, registerPublicAuthRoutes } from "./routes/auth.ts";
 import { registerDashboardRoutes } from "./routes/dashboard.ts";
@@ -10,6 +11,8 @@ import { registerFileRoutes } from "./routes/files.ts";
 import { registerFinanceRoutes } from "./routes/finance.ts";
 import { registerFleetRoutes } from "./routes/fleet.ts";
 import { registerOperationRoutes } from "./routes/operations.ts";
+import { registerNotificationRoutes } from "./routes/notifications.ts";
+import { registerReportRoutes } from "./routes/reports.ts";
 import { registerSyncRoutes } from "./routes/sync.ts";
 import { route } from "../lib/http.ts";
 
@@ -28,6 +31,8 @@ export function createV1Router(): Router {
   registerOperationRoutes(router);
   registerFinanceRoutes(router);
   registerSyncRoutes(router);
+  registerReportRoutes(router);
+  registerNotificationRoutes(router);
 
   router.post("/admin/jobs/billing", requireRole("admin"), route(async (_request, response) => {
     response.json(await runBillingJobs(new Date()));
@@ -51,7 +56,9 @@ export async function runBillingJobs(now: Date) {
     const incidents = await syncIncidentStates(db, now);
     const charges = await generateWeeklyCharges(db, now);
     const penalties = await applyLatePenalties(db, now);
+    const notices = await runScheduledNotices(db, now);
     return {
+      noticesCreated: notices.created,
       skipped: false as const,
       incidentsChanged: incidents.changed,
       chargesCreated: charges.created,

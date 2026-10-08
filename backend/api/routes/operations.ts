@@ -5,6 +5,7 @@ import { pool } from "../../db.js";
 import { HttpError, parse, route } from "../../lib/http.ts";
 import { rulesAt } from "../../services/billing.ts";
 import { applyIncidentEffects, assignVehicle, incidentStatusAt, returnVehicle } from "../../services/fleet.ts";
+import { notifyDriver, notifyStaff } from "../../services/notify.ts";
 import {
   type Db, assertDriverAccess, audit, isoDateTime, kz, notFound, optionalText, staff, updateColumns, uuid, withTransaction,
 } from "../context.ts";
@@ -177,6 +178,12 @@ export function registerOperationRoutes(router: Router) {
       const created = result.rows[0];
       await attach(db, created.id, body.attachmentIds);
       if (!isDriver) await applyIncidentEffects(db, created.id);
+      if (isDriver) {
+        await notifyStaff(db, {
+          kind: "ocorrencia", title: `Ocorrência: ${request.user.name}`, body: body.notes ?? body.type.replaceAll("_", " "),
+          route: "/validar", dedupeKey: `incident:${created.id}`,
+        });
+      }
       await audit(db, request.user.sub, "incident", created.id, "create", { type: body.type, status });
       return (await db.query("SELECT * FROM incidents WHERE id = $1", [created.id])).rows[0];
     });
@@ -201,6 +208,12 @@ export function registerOperationRoutes(router: Router) {
       });
       await applyIncidentEffects(db, id, current);
       await audit(db, request.user.sub, "incident", id, "validate", body);
+      if (current.driver_id) {
+        await notifyDriver(db, current.driver_id, {
+          kind: "ocorrencia_validada", title: "Ocorrência validada",
+          body: "A gestão validou a ocorrência; os dias parados são descontados.", route: "/m/pagamentos", dedupeKey: `incident-done:${id}`,
+        });
+      }
       return (await db.query("SELECT * FROM incidents WHERE id = $1", [id])).rows[0];
     });
     response.json(incident);
@@ -258,6 +271,11 @@ export function registerOperationRoutes(router: Router) {
       });
       await applyIncidentEffects(db, id, current);
       await audit(db, request.user.sub, "incident", id, "cancel", body);
+      if (current.driver_id && current.status === "por_validar") {
+        await notifyDriver(db, current.driver_id, {
+          kind: "ocorrencia_recusada", title: "Ocorrência recusada", body: body.reason, route: "/m/inicio", dedupeKey: `incident-done:${id}`,
+        });
+      }
       return (await db.query("SELECT * FROM incidents WHERE id = $1", [id])).rows[0];
     });
     response.json(incident);

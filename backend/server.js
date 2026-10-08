@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createV1Router, runBillingJobs } from "./api/v1.ts";
+import { dispatchPush, fcmConfigured } from "./services/notify.ts";
 import { authMode, registerAuthRoutes, requireAuth } from "./auth.js";
 import { MAX_UPLOAD_BYTES, allowedUploads, hasExpectedSignature, uploadsDir } from "./lib/files.ts";
 import { migrate, pool } from "./db.js";
@@ -275,4 +276,8 @@ function scheduleBillingJobs(intervalMs = 15 * 60 * 1000) {
     .catch((error) => console.error("Falha na tarefa de cobranças:", error));
   run();
   setInterval(run, intervalMs).unref();
+  // Notificações push: a cada minuto, só com FCM_SERVICE_ACCOUNT configurado.
+  if (fcmConfigured()) {
+    setInterval(() => dispatchPush(pool).catch((error) => console.error("Falha no envio push:", error.message)), 60_000).unref();
+  }
 }

@@ -12,6 +12,7 @@ import {
   latePenalty,
 } from "../domain/charges.ts";
 import { HttpError } from "../lib/http.ts";
+import { notices, notifyDriver, notifyStaff } from "./notify.ts";
 
 type Db = pg.PoolClient;
 
@@ -93,11 +94,16 @@ export async function generateChargesForAssignment(db: Db, assignment: Assignmen
     const inserted = await db.query(
       `INSERT INTO charges (kind, driver_id, vehicle_id, assignment_id, period_start, period_end, due_at, amount, status, calculation)
        VALUES ('semanal', $1, $2, $3, $4, $5, $6, $7, $8, $9)
-       ON CONFLICT DO NOTHING`,
+       ON CONFLICT DO NOTHING
+       RETURNING id, period_start, amount, due_at`,
       [assignment.driver_id, assignment.vehicle_id, assignment.id, calc.periodStart, calc.periodEnd, calc.dueAt,
         calc.amount, chargeStatus(calc.amount, 0), calculationJson(calc)],
     );
     created += inserted.rowCount ?? 0;
+    const charge = inserted.rows[0];
+    if (charge && Number(charge.amount) > 0) {
+      await notifyDriver(db, assignment.driver_id, notices.weeklyCharge({ ...charge, due_at: charge.due_at.toISOString() }));
+    }
   }
   if (created) await applyAvailableCredit(db, assignment.driver_id);
   return created;
@@ -319,7 +325,12 @@ export async function applyLatePenalties(db: Db, now: Date) {
     const { rules } = await rulesAt(db, charge.period_start);
     const settledAt = charge.status === "paga" && charge.last_payment_at ? charge.last_payment_at.toISOString() : null;
     const penalty = latePenalty({ amount: Number(charge.amount), dueAt: charge.due_at.toISOString() }, settledAt, now.toISOString(), rules);
-    if (penalty.breachAlert && !settledAt) breaches.push({ chargeId: charge.id, driverId: charge.driver_id, delayHours: Math.floor(penalty.delayHours) });
+    if (penalty.breachAlert && !settledAt) {
+      breaches.push({ chargeId: charge.id, driverId: charge.driver_id, delayHours: Math.floor(penalty.delayHours) });
+      const driver = await db.query("SELECT name FROM drivers WHERE id = $1", [charge.driver_id]);
+      const outstanding = Number(charge.amount) - Number((await db.query(`SELECT coalesce(sum(a.amount), 0) AS paid FROM payment_allocations a JOIN payments p ON p.id = a.payment_id WHERE a.charge_id = $1 AND p.voided_at IS NULL`, [charge.id])).rows[0].paid);
+      await notifyStaff(db, notices.breach(charge.id, driver.rows[0]?.name ?? "Motorista", outstanding, charge.period_start));
+    }
     if (!penalty.amount) continue;
     if (!charge.penalty_id) {
       await db.query(
@@ -329,10 +340,12 @@ export async function applyLatePenalties(db: Db, now: Date) {
         [charge.driver_id, charge.vehicle_id, charge.assignment_id, charge.period_start, charge.period_end, now,
           penalty.amount, charge.id, "Entrega feita depois do prazo."],
       );
+      await notifyDriver(db, charge.driver_id, notices.penalty(charge.id, penalty.amount, charge.period_start));
       changed += 1;
     } else if (Number(charge.penalty_amount) < penalty.amount) {
       await db.query("UPDATE charges SET amount = $2 WHERE id = $1", [charge.penalty_id, penalty.amount]);
       await refreshChargeStatus(db, charge.penalty_id);
+      await notifyDriver(db, charge.driver_id, notices.penalty(charge.id, penalty.amount, charge.period_start));
       changed += 1;
     }
   }

@@ -5,6 +5,7 @@ import { pool } from "../../db.js";
 import { effectivePaymentTime, splitTotal } from "../../domain/money.ts";
 import { HttpError, parse, route } from "../../lib/http.ts";
 import { recordPayment, voidCharge, voidPayment } from "../../services/billing.ts";
+import { notifyDriver, notifyStaff } from "../../services/notify.ts";
 import {
   audit, driverOnly, isoDate, isoDateTime, kz, notFound, optionalText, requireRole, staff, uuid, withTransaction,
 } from "../context.ts";
@@ -138,6 +139,10 @@ export function registerFinanceRoutes(router: Router) {
         [request.user.driverId, body.amount, body.paidAt, body.method, body.reference, body.proofFileId, body.clientId ?? null, request.user.sub],
       );
       await audit(db, request.user.sub, "payment_declaration", result.rows[0].id, "create", { amount: body.amount });
+      await notifyStaff(db, {
+        kind: "comprovativo", title: `Comprovativo de ${request.user.name}`, body: `${body.amount} Kz por confirmar.`,
+        route: "/validar", dedupeKey: `declaration:${result.rows[0].id}`,
+      });
       return result.rows[0];
     });
     response.status(201).json(declaration);
@@ -185,6 +190,10 @@ export function registerFinanceRoutes(router: Router) {
         [id, recorded.payment.id, request.user.sub],
       );
       await audit(db, request.user.sub, "payment_declaration", id, "confirm", { paymentId: recorded.payment.id });
+      await notifyDriver(db, declaration.driver_id, {
+        kind: "comprovativo_confirmado", title: "Pagamento confirmado",
+        body: `A gestão confirmou ${recorded.payment.amount} Kz.`, route: "/m/pagamentos", dedupeKey: `declaration-done:${id}`,
+      });
       return recorded;
     });
     response.json(result);
@@ -196,10 +205,14 @@ export function registerFinanceRoutes(router: Router) {
     await withTransaction(async (db) => {
       const result = await db.query(
         `UPDATE payment_declarations SET status = 'rejeitada', rejection_reason = $2, reviewed_by = $3, reviewed_at = now()
-         WHERE id = $1 AND status = 'pendente'`,
+         WHERE id = $1 AND status = 'pendente' RETURNING driver_id`,
         [id, body.reason, request.user.sub],
       );
       if (!result.rowCount) throw new HttpError(409, "ja_revisto", "Comprovativo inexistente ou já revisto.");
+      await notifyDriver(db, result.rows[0].driver_id, {
+        kind: "comprovativo_rejeitado", title: "Comprovativo rejeitado", body: body.reason,
+        route: "/m/inicio", dedupeKey: `declaration-done:${id}`,
+      });
       await audit(db, request.user.sub, "payment_declaration", id, "reject", body);
     });
     response.json({ ok: true });

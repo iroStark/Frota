@@ -272,6 +272,53 @@ describe("operação completa", () => {
     assert.deepEqual(delta.data.changes.vehicles.map((v: any) => v.color), ["Branco"]);
   });
 
+  it("relatório do período e exportação CSV", async () => {
+    const from = W1;
+    const to = localDateOf(now.getTime(), 60);
+    const report = await call("GET", `/reports/summary?from=${from}&to=${to}`, undefined, t.gestor);
+    assert.equal(report.status, 200);
+    const { totals, weeks, drivers, vehicles } = report.data;
+    assert.equal(totals.net, totals.received - totals.ownerExpenses);
+    const expenses = (await pool.query(
+      "SELECT coalesce(sum(amount), 0)::bigint AS total FROM expenses WHERE deleted_at IS NULL AND responsible = 'proprietaria' AND spent_on BETWEEN $1 AND $2",
+      [from, to],
+    )).rows[0].total;
+    assert.equal(totals.ownerExpenses, Number(expenses));
+    assert.deepEqual(weeks.map((w: any) => w.week).slice(0, 2), [W1, W2]);
+    assert.ok(weeks.every((w: any) => w.paid <= w.expected));
+    assert.ok(drivers.some((d: any) => d.id === ids.driver && d.weeklyCharged > 0));
+    assert.ok(vehicles.some((v: any) => v.id === ids.vehicle));
+    assert.equal((await call("GET", `/reports/summary?from=${to}&to=${from}`, undefined, t.gestor)).status, to === from ? 200 : 422);
+    assert.equal((await call("GET", `/reports/summary?from=${from}&to=${to}`, undefined, t.driver)).status, 403);
+
+    const csv = await fetch(`${base}/reports/movements.csv?from=${from}&to=${to}`, { headers: { Authorization: `Bearer ${t.gestor}` } });
+    assert.equal(csv.status, 200);
+    const bytes = new Uint8Array(await csv.arrayBuffer());
+    assert.deepEqual([...bytes.slice(0, 3)], [0xef, 0xbb, 0xbf]); // BOM para o Excel ler os acentos
+    const text = new TextDecoder().decode(bytes);
+    assert.ok(text.startsWith("data;tipo;motorista"));
+    assert.ok(text.includes("Despesa (proprietaria)"));
+    assert.ok(text.includes("Cobrança semanal"));
+  });
+
+  it("avisos: a gestão e o motorista recebem os seus, sem repetir", async () => {
+    await runBillingJobs(now);
+    await runBillingJobs(now); // corre duas vezes: os avisos não se repetem
+    const staff = await call("GET", "/me/notifications", undefined, t.gestor);
+    const staffKinds = staff.data.items.map((n: any) => n.kind);
+    for (const kind of ["comprovativo", "ocorrencia", "atraso_72h", "documento"]) assert.ok(staffKinds.includes(kind), `falta ${kind}`);
+    const texts = staff.data.items.map((n: any) => `${n.kind}|${n.title}|${n.body}`);
+    assert.equal(texts.length, new Set(texts).size); // nenhum aviso repetido
+    const mine = await call("GET", "/me/notifications", undefined, t.driver);
+    const driverKinds = mine.data.items.map((n: any) => n.kind);
+    for (const kind of ["comprovativo_confirmado", "ocorrencia_validada"]) assert.ok(driverKinds.includes(kind), `falta ${kind}`);
+    assert.ok(mine.data.items.every((n: any) => n.title && n.body));
+    assert.ok(mine.data.unread > 0);
+    await call("POST", "/me/notifications/read", {}, t.driver);
+    assert.equal((await call("GET", "/me/notifications", undefined, t.driver)).data.unread, 0);
+    assert.equal((await call("POST", "/me/devices", { token: "x".repeat(40), platform: "ios" }, t.driver)).status, 200);
+  });
+
   it("regista auditoria das operações", async () => {
     const audit = await pool.query("SELECT DISTINCT entity || ':' || action AS a FROM audit_log");
     const actions = audit.rows.map((row) => row.a);
