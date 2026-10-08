@@ -116,6 +116,14 @@ class DriverDetailScreen extends ConsumerWidget {
                     ]),
                   const Divider(height: 1),
                   ListTile(
+                    leading: const Icon(Icons.upload_file_outlined),
+                    title: Text('Documentos (${(driver['documents'] as List? ?? const []).length})'),
+                    trailing: TextButton(
+                      onPressed: () => context.push('/documentos/novo?dono=driver&id=$driverId'),
+                      child: const Text('Adicionar'),
+                    ),
+                  ),
+                  ListTile(
                     leading: Icon(access?['activated'] == true ? Icons.phone_iphone : Icons.mobile_off_outlined),
                     title: Text(access?['activated'] == true ? 'Usa a app' : 'Ainda não usa a app'),
                     trailing: TextButton(

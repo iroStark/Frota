@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:intl/intl.dart';
+
 import '../../core/format/format.dart';
 
 const paymentMethods = {
@@ -101,3 +103,37 @@ class DateTimeField extends StatelessWidget {
         onTap: () => _pick(context),
       );
 }
+
+/// Só a data (documentos, despesas).
+class DateOnlyField extends StatelessWidget {
+  const DateOnlyField({super.key, required this.label, required this.value, required this.onChanged, this.allowClear = false, this.firstDate, this.lastDate});
+
+  final String label;
+  final DateTime? value;
+  final ValueChanged<DateTime?> onChanged;
+  final bool allowClear;
+  final DateTime? firstDate;
+  final DateTime? lastDate;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.event_outlined),
+        title: Text(label),
+        subtitle: Text(value == null ? 'Sem data' : DateFormat('d MMM y', 'pt_PT').format(value!)),
+        trailing: allowClear && value != null
+            ? IconButton(tooltip: 'Limpar', onPressed: () => onChanged(null), icon: const Icon(Icons.clear))
+            : const Icon(Icons.edit_calendar_outlined),
+        onTap: () async {
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: value ?? DateTime.now(),
+            firstDate: firstDate ?? DateTime.now().subtract(const Duration(days: 365 * 5)),
+            lastDate: lastDate ?? DateTime.now().add(const Duration(days: 365 * 15)),
+          );
+          if (picked != null) onChanged(picked);
+        },
+      );
+}
+
+String isoDay(DateTime value) => DateFormat('yyyy-MM-dd').format(value);

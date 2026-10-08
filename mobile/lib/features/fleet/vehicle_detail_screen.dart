@@ -115,6 +115,24 @@ class VehicleDetailScreen extends ConsumerWidget {
                     ),
                 ]),
               ),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push('/ocorrencias/nova?viatura=$vehicleId'),
+                  icon: const Icon(Icons.report_outlined),
+                  label: const Text('Ocorrência'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push('/documentos/novo?dono=vehicle&id=$vehicleId'),
+                  icon: const Icon(Icons.upload_file_outlined),
+                  label: const Text('Documento'),
+                ),
+              ),
+            ]),
             const SectionHeader('Documentos'),
             if (documents.isEmpty) const EmptyState('Sem documentos registados.', icon: Icons.description_outlined),
             for (final doc in documents)

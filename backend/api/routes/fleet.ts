@@ -8,7 +8,7 @@ import { localDateOf } from "../../domain/time.ts";
 import { driverStatement, rulesAt } from "../../services/billing.ts";
 import { refreshVehicleStatus } from "../../services/fleet.ts";
 import {
-  type Db, assertDriverAccess, audit, isoDate, kz, notFound, optionalText, staff, updateColumns, uuid, withClient, withTransaction,
+  type Db, assertDriverAccess, audit, isoDate, kz, notFound, optionalText, requireRole, staff, updateColumns, uuid, withClient, withTransaction,
 } from "../context.ts";
 
 const vehicleFields = z.object({
@@ -104,6 +104,49 @@ export function registerFleetRoutes(router: Router) {
     const today = localDateOf(Date.now(), 60);
     const current = await withClient((db) => rulesAt(db, today));
     response.json({ effectiveOn: today, weeklyFee: current.weeklyFee, ...current.extra, rules: current.rules });
+  }));
+
+  router.get("/contract-rules", staff, route(async (_request, response) => {
+    const result = await pool.query(
+      `SELECT c.id, c.effective_from, c.weekly_fee, c.rules, c.created_at, u.name AS created_by_name
+       FROM contract_rules c LEFT JOIN users u ON u.id = c.created_by ORDER BY c.effective_from DESC`,
+    );
+    response.json(result.rows);
+  }));
+
+  /**
+   * Nova versão das regras (só admin). Vale a partir de `effectiveFrom` (hoje ou depois): semanas
+   * já cobradas não mudam; cada semana usa as regras em vigor na sua segunda-feira.
+   */
+  router.post("/contract-rules", requireRole("admin"), route(async (request, response) => {
+    const body = parse(z.object({
+      effectiveFrom: isoDate,
+      weeklyFee: kz.refine((value) => value > 0, "Maior que zero."),
+      penaltyLate24: kz,
+      penaltyLate72: kz,
+      fineOffHours: kz,
+      returnDelayDaily: kz,
+      deductibleLimit: kz,
+      deliveryHour: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora HH:MM."),
+      minStopHours: z.number().min(0).max(24),
+    }), request.body);
+    const today = localDateOf(Date.now(), 60);
+    if (body.effectiveFrom < today) throw new HttpError(422, "data_passada", "As novas regras só podem valer a partir de hoje.");
+    const saved = await withTransaction(async (db) => {
+      const current = await rulesAt(db, body.effectiveFrom);
+      const { weeklyFee, effectiveFrom, ...values } = body;
+      const rules = { ...current.extra, ...values };
+      const result = await db.query(
+        `INSERT INTO contract_rules (effective_from, weekly_fee, rules, created_by) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (effective_from) DO UPDATE SET weekly_fee = EXCLUDED.weekly_fee, rules = EXCLUDED.rules,
+           created_by = EXCLUDED.created_by, created_at = now()
+         RETURNING *`,
+        [effectiveFrom, weeklyFee, JSON.stringify(rules), request.user.sub],
+      );
+      await audit(db, request.user.sub, "contract_rules", result.rows[0].id, "save", body);
+      return result.rows[0];
+    });
+    response.status(201).json(saved);
   }));
 
   // --- viaturas ------------------------------------------------------------------------------

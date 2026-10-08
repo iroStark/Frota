@@ -6,7 +6,9 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
-		<key>NSFaceIDUsageDescription</key>
+		<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Para registar o local de uma ocorrência (acidente, avaria) que comunica à gestão.</string>
+	<key>NSFaceIDUsageDescription</key>
 	<string>Usamos o Face ID para desbloquear a app UHOCHA.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Para fotografar comprovativos, documentos e o estado das viaturas.</string>

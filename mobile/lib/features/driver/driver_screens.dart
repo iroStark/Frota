@@ -7,6 +7,7 @@ import '../../core/format/format.dart';
 import '../../core/widgets/widgets.dart';
 import '../shared/models.dart';
 import '../shared/providers.dart';
+import '../payments/review_screen.dart' show incidentTypeLabels;
 import '../shared/statement_view.dart';
 
 const _documentLabels = {
@@ -95,6 +96,23 @@ class DriverHomeScreen extends ConsumerWidget {
                       trailing: validityChip(doc['validity'] as String?),
                     ),
                   )),
+            ],
+            if (home.openIncidents.isNotEmpty) ...[
+              const SectionHeader('Ocorrências comunicadas'),
+              ...home.openIncidents.map((incident) {
+                final status = incident['status'] as String;
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.report_outlined),
+                    title: Text(incidentTypeLabels[incident['type']] ?? '${incident['type']}'),
+                    subtitle: Text('Desde ${formatDateTime(DateTime.parse('${incident['start_at']}'))}'),
+                    trailing: StatusChip(
+                      status == 'por_validar' ? 'À espera da gestão' : status == 'em_curso' ? 'Validada' : 'Agendada',
+                      tone: status == 'por_validar' ? Tone.warn : Tone.ok,
+                    ),
+                  ),
+                );
+              }),
             ],
             if (home.declarations.isNotEmpty) ...[
               const SectionHeader('Comprovativos enviados'),

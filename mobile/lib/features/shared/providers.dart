@@ -87,3 +87,38 @@ void invalidateFleet(WidgetRef ref, {String? vehicleId, String? driverId}) {
     ref.invalidate(driverStatementProvider(driverId));
   }
 }
+
+final incidentsProvider = FutureProvider.autoDispose.family<Cached<List<Map<String, dynamic>>>, String>(
+  (ref, status) => _cachedGet(ref, 'incidents_$status', status == 'todas' ? '/incidents' : '/incidents?status=$status', _rows),
+);
+
+final myIncidentsProvider = FutureProvider.autoDispose<Cached<List<Map<String, dynamic>>>>(
+  (ref) => _cachedGet(ref, 'me_incidents', '/me/incidents', _rows),
+);
+
+final expensesProvider = FutureProvider.autoDispose<Cached<List<Map<String, dynamic>>>>(
+  (ref) => _cachedGet(ref, 'expenses', '/expenses', _rows),
+);
+
+final documentsProvider = FutureProvider.autoDispose<Cached<List<Map<String, dynamic>>>>(
+  (ref) => _cachedGet(ref, 'documents', '/documents', _rows),
+);
+
+final contractHistoryProvider = FutureProvider.autoDispose<Cached<List<Map<String, dynamic>>>>(
+  (ref) => _cachedGet(ref, 'contract_history', '/contract-rules', _rows),
+);
+
+final usersProvider = FutureProvider.autoDispose<Cached<List<Map<String, dynamic>>>>(
+  (ref) => _cachedGet(ref, 'users', '/users', _rows),
+);
+
+void invalidateIncidents(WidgetRef ref) {
+  for (final status in ['todas', 'por_validar', 'em_curso', 'agendada', 'resolvida', 'cancelada']) {
+    ref.invalidate(incidentsProvider(status));
+  }
+  ref.invalidate(incidentsToValidateProvider);
+  ref.invalidate(myIncidentsProvider);
+  ref.invalidate(driverHomeProvider);
+  ref.invalidate(dashboardProvider);
+  ref.invalidate(vehiclesProvider);
+}

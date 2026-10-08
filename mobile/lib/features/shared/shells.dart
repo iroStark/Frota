@@ -18,15 +18,15 @@ class _Action {
 const _staffActions = [
   _Action(Icons.payments_outlined, 'Receber pagamento', '/pagamentos/receber'),
   _Action(Icons.groups_outlined, 'Entrega em grupo', '/pagamentos/grupo'),
-  _Action(Icons.receipt_outlined, 'Nova despesa', '/em-breve?titulo=Nova despesa'),
-  _Action(Icons.report_outlined, 'Nova ocorrência', '/em-breve?titulo=Nova ocorrência'),
+  _Action(Icons.receipt_outlined, 'Nova despesa', '/despesas/nova'),
+  _Action(Icons.report_outlined, 'Nova ocorrência', '/ocorrencias/nova'),
   _Action(Icons.key_outlined, 'Atribuir viatura', '/atribuir'),
-  _Action(Icons.upload_file_outlined, 'Novo documento', '/em-breve?titulo=Novo documento'),
+  _Action(Icons.upload_file_outlined, 'Novo documento', '/documentos/novo'),
 ];
 
 const _driverActions = [
   _Action(Icons.receipt_long_outlined, 'Enviar comprovativo', '/m/comprovativo'),
-  _Action(Icons.car_crash_outlined, 'Comunicar ocorrência', '/em-breve?titulo=Comunicar ocorrência'),
+  _Action(Icons.car_crash_outlined, 'Comunicar ocorrência', '/m/ocorrencia'),
 ];
 
 void _openQuickActions(BuildContext context, List<_Action> actions) {
@@ -113,12 +113,12 @@ class MoreScreen extends ConsumerWidget {
     final user = ref.watch(sessionProvider).user;
     const roleLabels = {Role.admin: 'Administrador', Role.gestor: 'Gestor', Role.motorista: 'Motorista'};
     final items = [
-      (Icons.bar_chart_outlined, 'Relatórios'),
-      (Icons.report_outlined, 'Ocorrências'),
-      (Icons.receipt_outlined, 'Despesas'),
-      (Icons.folder_outlined, 'Documentos'),
-      (Icons.gavel_outlined, 'Contrato e valores'),
-      if (user?.role == Role.admin) (Icons.group_outlined, 'Utilizadores'),
+      (Icons.bar_chart_outlined, 'Relatórios', '/em-breve?titulo=Relatórios'),
+      (Icons.report_outlined, 'Ocorrências', '/ocorrencias'),
+      (Icons.receipt_outlined, 'Despesas', '/despesas'),
+      (Icons.folder_outlined, 'Documentos', '/documentos'),
+      (Icons.gavel_outlined, 'Contrato e valores', '/contrato'),
+      if (user?.role == Role.admin) (Icons.group_outlined, 'Utilizadores', '/utilizadores'),
     ];
     return Scaffold(
       appBar: AppBar(title: const Text('Mais')),
@@ -133,12 +133,12 @@ class MoreScreen extends ConsumerWidget {
         const SizedBox(height: 12),
         Card(
           child: Column(children: [
-            for (final (icon, label) in items)
+            for (final (icon, label, route) in items)
               ListTile(
                 leading: Icon(icon),
                 title: Text(label),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/em-breve?titulo=${Uri.encodeComponent(label)}'),
+                onTap: () => context.push(route),
               ),
           ]),
         ),

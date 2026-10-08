@@ -156,6 +156,24 @@ describe("API v1", () => {
     assert.equal(afterTheft.status, 401);
   });
 
+  it("regras do contrato: nova versão futura (só admin), sem datas passadas", async () => {
+    const future = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+    const body = {
+      effectiveFrom: future, weeklyFee: 140000, penaltyLate24: 5000, penaltyLate72: 15000, fineOffHours: 50000,
+      returnDelayDaily: 30000, deductibleLimit: 80000, deliveryHour: "12:00", minStopHours: 4,
+    };
+    assert.equal((await call("POST", "/contract-rules", body, driverSession.accessToken)).status, 403);
+    assert.equal((await call("POST", "/contract-rules", { ...body, effectiveFrom: "2020-01-01" }, adminToken)).status, 422);
+    assert.equal((await call("POST", "/contract-rules", { ...body, deliveryHour: "25:00" }, adminToken)).status, 422);
+    const saved = await call("POST", "/contract-rules", body, adminToken);
+    assert.equal(saved.status, 201);
+    const history = await call("GET", "/contract-rules", undefined, adminToken);
+    assert.equal(history.data[0].weekly_fee, 140000);
+    assert.equal(history.data.length, 2);
+    const current = await call("GET", "/contract-rules/current", undefined, adminToken);
+    assert.equal(current.data.weeklyFee, 130000); // a nova versão ainda não está em vigor
+  });
+
   it("bloqueia a conta após 5 tentativas falhadas", async () => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       await call("POST", "/auth/login", { login: "admin@uhocha.test", password: "errada!!" });

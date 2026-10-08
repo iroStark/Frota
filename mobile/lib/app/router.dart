@@ -11,6 +11,11 @@ import '../features/fleet/driver_form_screen.dart';
 import '../features/fleet/return_screen.dart';
 import '../features/fleet/vehicle_detail_screen.dart';
 import '../features/fleet/vehicle_form_screen.dart';
+import '../features/operations/admin_screens.dart';
+import '../features/operations/documents_screen.dart';
+import '../features/operations/expenses_screen.dart';
+import '../features/operations/incident_form_screen.dart';
+import '../features/operations/incidents_screen.dart';
 import '../features/payments/group_payment_screen.dart';
 import '../features/payments/receive_payment_screen.dart';
 import '../features/payments/review_screen.dart';
@@ -53,7 +58,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final home = session.user!.isStaff ? '/inicio' : '/m/inicio';
           if (path == '/' || publicPaths.contains(path) || path == '/desbloquear') return home;
           final inDriverArea = path.startsWith('/m/');
-          final inStaffArea = ['/inicio', '/cobrancas', '/frota', '/mais', '/alertas', '/pagamentos', '/validar', '/motoristas', '/viaturas', '/atribuir', '/devolver'].any(path.startsWith);
+          final inStaffArea = ['/inicio', '/cobrancas', '/frota', '/mais', '/alertas', '/pagamentos', '/validar', '/motoristas', '/viaturas', '/atribuir', '/devolver', '/ocorrencias', '/despesas', '/documentos', '/contrato', '/utilizadores'].any(path.startsWith);
           if (session.user!.isStaff && inDriverArea) return home;
           if (!session.user!.isStaff && inStaffArea) return home;
           return null;
@@ -80,6 +85,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/devolver', builder: (_, state) => ReturnScreen(assignment: _extraMap(state)!)),
       GoRoute(path: '/m/comprovativo', builder: (_, _) => const SendProofScreen()),
+      GoRoute(path: '/m/ocorrencia', builder: (_, _) => const IncidentFormScreen()),
+      GoRoute(path: '/ocorrencias', builder: (_, _) => const IncidentsScreen()),
+      GoRoute(path: '/ocorrencias/nova', builder: (_, state) => IncidentFormScreen(vehicleId: state.uri.queryParameters['viatura'])),
+      GoRoute(path: '/despesas', builder: (_, _) => const ExpensesScreen()),
+      GoRoute(path: '/despesas/nova', builder: (_, _) => const ExpenseFormScreen()),
+      GoRoute(path: '/documentos', builder: (_, _) => const DocumentsScreen()),
+      GoRoute(
+        path: '/documentos/novo',
+        builder: (_, state) => DocumentFormScreen(ownerType: state.uri.queryParameters['dono'], ownerId: state.uri.queryParameters['id']),
+      ),
+      GoRoute(path: '/contrato', builder: (_, _) => const ContractScreen()),
+      GoRoute(
+        path: '/utilizadores',
+        redirect: (_, _) => ref.read(sessionProvider).user?.role == Role.admin ? null : '/mais',
+        builder: (_, _) => const UsersScreen(),
+      ),
       GoRoute(path: '/em-breve', builder: (_, state) => ComingSoonScreen(title: state.uri.queryParameters['titulo'] ?? 'Em breve')),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => AppShell(shell: shell, isStaff: true),

@@ -467,13 +467,15 @@ A fazer (antes do corte):
 - Corrigido pelo caminho: servidor caía quando o Postgres terminava ligações; app podia ficar presa no arranque; vários erros de interface só visíveis a correr a app.
 - Recibo em PDF partilhável fica para a Fase 6 (relatórios/exportação).
 
-### Fase 5 — Operações complementares (1,5 semanas)
-- [ ] Ocorrências (criar, pré-visualizar impacto, resolver, anexos).
-- [ ] Despesas (incl. lote com divisão).
-- [ ] Documentos com validade e captura.
-- [ ] Definições do contrato com histórico; gestão de utilizadores.
+### Fase 5 — Operações complementares ✅ (ramo `fase-5-operacao`)
+- [x] Ocorrências: o motorista comunica (tipo, período, descrição, fotos, localização GPS) e fica "por validar"; o gestor regista (viatura, impacto: dias parados, imobilização, multa/franquia), resolve e cancela. Lista com filtros por estado.
+- [x] Despesas: uma viatura, valor por viatura, dividir um total (conta visível antes de gravar, mesma regra do servidor), foto do recibo; lista por mês com o total da proprietária.
+- [x] Documentos: lista "a tratar" (expirados/a expirar), registo com foto e validade para motorista, viatura ou empresa; atalhos nas fichas.
+- [x] Contrato e valores: regras em vigor e histórico; o admin cria nova versão a partir de uma data (backend `GET/POST /contract-rules`).
+- [x] Utilizadores (admin): contas da equipa, ativar/desativar.
+- [x] Teste de integração `operacao_test` no simulador.
 
-### Fase 5B — Perfil motorista (1,5 semanas)
+### Fase 5B — Perfil motorista ✅ (feito ao longo das Fases 3–5: início, pagamentos, comprovativos, ocorrências, perfil)
 - [ ] Shell e router por `role`; ativação por código + PIN.
 - [ ] Início, Pagamentos (extrato com detalhe por dias), Perfil, documentos.
 - [ ] Enviar comprovativo e comunicar ocorrência (câmara, GPS, hora).
