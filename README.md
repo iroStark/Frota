@@ -127,6 +127,14 @@ Em [`mobile/`](mobile/README.md). Para dados de teste: `npm run seed:demo` (só 
 - API v1 em `/api/v1`, documentada em [`docs/API-v1.md`](docs/API-v1.md) (Bearer token; `JWT_SECRET` obrigatório em produção). A tarefa de cobranças corre no arranque e a cada 15 min (`BILLING_JOBS=off` desliga).
 - `npm run import:legacy -- --dry-run` — gera em `backups/` um relatório da importação dos dados antigos (saldos por motorista, semanas em aberto, penalidades nunca cobradas, avisos) sem gravar nada. Sem `--dry-run` grava numa transação e recusa repetir. **Só importar no corte final**: depois disso, o PWA deixa de ser a fonte de verdade. As semanas importadas não recebem penalidades automáticas (`settings.penalties_from`).
 
+### Notificações push (opcional)
+
+Os avisos aparecem sempre dentro da app. Para também chegarem como notificação no telemóvel:
+
+1. Criar um projeto em <https://console.firebase.google.com>, adicionar as apps Android (`ao.uhocha.uhocha_frota`) e iOS (`ao.uhocha.uhochaFrota`).
+2. Em *Definições do projeto → Contas de serviço*, gerar uma chave privada (JSON) e colocá-la inteira na variável `FCM_SERVICE_ACCOUNT` do serviço no Railway.
+3. Na app: `flutterfire configure` e ativar o registo do aparelho (`POST /api/v1/me/devices`) — ver `mobile/README.md`.
+
 ### 6. Acesso e cópias de segurança
 
 - A app pede a **chave de acesso** (`APP_ACCESS_KEY`) uma vez por aparelho; a sessão dura 30 dias (cookie `HttpOnly`). Ficheiros em `/uploads` também exigem sessão.

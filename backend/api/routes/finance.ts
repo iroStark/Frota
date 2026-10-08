@@ -5,7 +5,7 @@ import { pool } from "../../db.js";
 import { effectivePaymentTime, splitTotal } from "../../domain/money.ts";
 import { HttpError, parse, route } from "../../lib/http.ts";
 import { recordPayment, voidCharge, voidPayment } from "../../services/billing.ts";
-import { notifyDriver, notifyStaff } from "../../services/notify.ts";
+import { kz as formatKz, notifyDriver, notifyStaff } from "../../services/notify.ts";
 import {
   audit, driverOnly, isoDate, isoDateTime, kz, notFound, optionalText, requireRole, staff, uuid, withTransaction,
 } from "../context.ts";
@@ -140,7 +140,7 @@ export function registerFinanceRoutes(router: Router) {
       );
       await audit(db, request.user.sub, "payment_declaration", result.rows[0].id, "create", { amount: body.amount });
       await notifyStaff(db, {
-        kind: "comprovativo", title: `Comprovativo de ${request.user.name}`, body: `${body.amount} Kz por confirmar.`,
+        kind: "comprovativo", title: `Comprovativo de ${request.user.name}`, body: `${formatKz(body.amount)} por confirmar.`,
         route: "/validar", dedupeKey: `declaration:${result.rows[0].id}`,
       });
       return result.rows[0];
@@ -192,7 +192,7 @@ export function registerFinanceRoutes(router: Router) {
       await audit(db, request.user.sub, "payment_declaration", id, "confirm", { paymentId: recorded.payment.id });
       await notifyDriver(db, declaration.driver_id, {
         kind: "comprovativo_confirmado", title: "Pagamento confirmado",
-        body: `A gestão confirmou ${recorded.payment.amount} Kz.`, route: "/m/pagamentos", dedupeKey: `declaration-done:${id}`,
+        body: `A gestão confirmou ${formatKz(recorded.payment.amount)}.`, route: "/m/pagamentos", dedupeKey: `declaration-done:${id}`,
       });
       return recorded;
     });

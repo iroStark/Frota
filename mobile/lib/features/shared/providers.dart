@@ -122,3 +122,13 @@ void invalidateIncidents(WidgetRef ref) {
   ref.invalidate(dashboardProvider);
   ref.invalidate(vehiclesProvider);
 }
+
+/// Chave "AAAA-MM-DD|AAAA-MM-DD".
+final reportProvider = FutureProvider.autoDispose.family<Cached<Map<String, dynamic>>, String>((ref, period) {
+  final [from, to] = period.split('|');
+  return _cachedGet(ref, 'report_${from}_$to', '/reports/summary?from=$from&to=$to', _map);
+});
+
+final notificationsProvider = FutureProvider.autoDispose<Cached<Map<String, dynamic>>>(
+  (ref) => _cachedGet(ref, 'notifications', '/me/notifications', _map),
+);

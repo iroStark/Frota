@@ -5,6 +5,7 @@ import '../../core/format/format.dart';
 import '../../core/widgets/widgets.dart';
 import '../payments/common.dart';
 import 'models.dart';
+import 'receipt.dart';
 
 Tone chargeTone(String status, {bool overdue = false}) => switch (status) {
       'paga' => Tone.ok,
@@ -32,7 +33,7 @@ List<String> chargeDetails(StatementCharge charge) => [
 
 /// Conta corrente: saldo, cobranças (com o cálculo por dias) e pagamentos. Usado pelo motorista
 /// (Pagamentos) e pelo gestor (ficha do motorista).
-List<Widget> statementWidgets(BuildContext context, Statement statement) {
+List<Widget> statementWidgets(BuildContext context, Statement statement, {String? driverName}) {
   final now = DateTime.now();
   return [
     Row(children: [
@@ -79,6 +80,11 @@ List<Widget> statementWidgets(BuildContext context, Statement statement) {
               paymentMethods[payment.method] ?? (payment.method == 'caucao' ? 'Caução' : payment.method),
               if (payment.reference != null) payment.reference!,
             ].join(' · ')),
+            trailing: IconButton(
+              tooltip: 'Recibo em PDF',
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              onPressed: () => shareReceipt(driverName: driverName ?? '', payment: payment, balanceAfter: statement.balance),
+            ),
           ),
         )),
   ];

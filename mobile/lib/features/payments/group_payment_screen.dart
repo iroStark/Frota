@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_error.dart';
-import '../../core/auth/session.dart';
+import '../../core/offline/outbox.dart';
 import '../../core/format/format.dart';
 import '../../core/widgets/photo_field.dart';
 import '../../core/widgets/widgets.dart';
@@ -58,23 +58,27 @@ class _GroupPaymentScreenState extends ConsumerState<GroupPaymentScreen> {
       return;
     }
     setState(() => _busy = true);
-    final api = ref.read(apiProvider);
     try {
-      final proofFileId = _photo == null ? null : await api.uploadFile(_photo!.path, category: 'entrega-comprovativo');
-      await api.post<List<dynamic>>('/payments/batch', {
-        'receivedAt': _receivedAt.toUtc().toIso8601String(),
-        'method': _method,
-        'reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(),
-        'proofFileId': proofFileId,
-        'items': [
-          for (final row in chosen) {'driverId': row.charge.driverId, 'amount': parseKz(row.amount.text), 'clientId': row.clientId},
-        ],
-      });
+      final result = await ref.read(outboxProvider.notifier).submit(
+        path: '/payments/batch',
+        label: 'Entrega em grupo (${chosen.length}): ${formatKz(_total)}',
+        body: {
+          'receivedAt': _receivedAt.toUtc().toIso8601String(),
+          'method': _method,
+          'reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(),
+          'items': [
+            for (final row in chosen) {'driverId': row.charge.driverId, 'amount': parseKz(row.amount.text), 'clientId': row.clientId},
+          ],
+        },
+        files: [if (_photo != null) OutboxFile(field: 'proofFileId', path: _photo!.path, category: 'entrega-comprovativo')],
+      );
       for (final row in chosen) {
         invalidateMoney(ref, driverId: row.charge.driverId);
       }
       if (!mounted) return;
-      showMessage(context, '${chosen.length} pagamento(s) registado(s): ${formatKz(_total)}.');
+      showMessage(context, result == SubmitResult.queued
+          ? 'Sem rede: ${chosen.length} pagamento(s) guardado(s) e enviado(s) quando houver ligação.'
+          : '${chosen.length} pagamento(s) registado(s): ${formatKz(_total)}.');
       context.pop();
     } on ApiException catch (error) {
       if (mounted) showMessage(context, error.message);

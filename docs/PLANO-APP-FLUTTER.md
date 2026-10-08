@@ -482,10 +482,13 @@ A fazer (antes do corte):
 - [ ] Caixa "Para validar" do gestor (confirmar/rejeitar).
 - **Aceitação:** motorista envia comprovativo, gestor confirma, saldo do motorista atualiza nos dois telemóveis; motorista não consegue aceder a nenhum dado de outro motorista (teste automatizado).
 
-### Fase 6 — Offline, notificações e relatórios (1,5 semanas)
-- [ ] Fila de escrita offline idempotente + indicador de sincronização.
-- [ ] FCM + notificações agendadas pelo servidor.
-- [ ] Relatórios com gráficos e exportação PDF/CSV.
+### Fase 6 — Relatórios, avisos e offline ✅ (ramo `fase-6-relatorios`)
+- [x] Relatórios por período (este mês, mês passado, 3 meses, ano): líquido, taxa de cobrança, gráfico semanal esperado vs recebido, motoristas (cobrado, pago, em falta, atrasos), viaturas (recebido − despesas), despesas por categoria.
+- [x] Exportação CSV dos movimentos (abre no Excel com acentos; protegido contra fórmulas) e recibo de pagamento em PDF, ambos partilháveis (WhatsApp, email).
+- [x] Avisos na app, sem repetição: nova cobrança, penalidade, atraso > 72 h, comprovativo enviado/confirmado/rejeitado, ocorrência comunicada/validada/recusada, lembrete de domingo 18:00, documentos a expirar (30 e 7 dias). Sino com contador.
+- [x] Notificações push: servidor pronto (FCM HTTP v1, registo de aparelhos). **Falta**: criar o projeto Firebase, configurar `FCM_SERVICE_ACCOUNT` no servidor e juntar `google-services.json`/`GoogleService-Info.plist` + `firebase_messaging` na app.
+- [x] Modo offline: pagamentos, entregas em grupo, comprovativos e despesas sem rede ficam numa fila (com cópia das fotos) e são enviados sozinhos ao voltar a ligação/abrir a app; sem duplicados (`clientId`); recusas do servidor ficam visíveis para tentar de novo ou descartar; a fila é apagada ao sair da conta.
+- [x] Testes: relatório/CSV e avisos (integração), assinatura FCM, fila offline, recibo PDF, simulador (`relatorios_test`).
 
 ### Fase 7 — Qualidade e lançamento (1–1,5 semanas)
 - [ ] Testes de widget/golden dos ecrãs-chave; `integration_test` do fluxo de cobrança.

@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/theme.dart';
 import '../../core/auth/session.dart';
+import '../../core/format/format.dart';
+import '../../core/offline/outbox.dart';
 import '../../core/widgets/widgets.dart';
 import '../driver/driver_screens.dart' show SettingsSection;
+import 'providers.dart';
 
 class _Action {
   const _Action(this.icon, this.label, this.route);
@@ -53,14 +56,40 @@ void _openQuickActions(BuildContext context, List<_Action> actions) {
 /// Barra inferior com um botão central de ação rápida (não é um separador).
 /// `isStaff` vem da rota (não da sessão): durante a troca de conta a casca antiga ainda pode
 /// estar montada com o perfil novo, e os separadores têm de corresponder aos seus ramos.
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.shell, required this.isStaff});
 
   final StatefulNavigationShell shell;
   final bool isStaff;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ao voltar à app: enviar o que ficou em fila e atualizar os avisos.
+    _lifecycle = AppLifecycleListener(onResume: () {
+      ref.read(outboxProvider.notifier).flush();
+      ref.invalidate(notificationsProvider);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(outboxProvider.notifier).flush());
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = widget.shell;
+    final isStaff = widget.isStaff;
     final tabs = isStaff
         ? const [
             NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Início'),
@@ -86,6 +115,7 @@ class AppShell extends ConsumerWidget {
             leading: const Icon(Icons.cloud_off),
             actions: [TextButton(onPressed: () => ref.read(sessionProvider.notifier).restore(), child: const Text('Repetir'))],
           ),
+        const _OutboxBanner(),
         Expanded(child: shell),
       ]),
       bottomNavigationBar: NavigationBar(
@@ -113,7 +143,7 @@ class MoreScreen extends ConsumerWidget {
     final user = ref.watch(sessionProvider).user;
     const roleLabels = {Role.admin: 'Administrador', Role.gestor: 'Gestor', Role.motorista: 'Motorista'};
     final items = [
-      (Icons.bar_chart_outlined, 'Relatórios', '/em-breve?titulo=Relatórios'),
+      (Icons.bar_chart_outlined, 'Relatórios', '/relatorios'),
       (Icons.report_outlined, 'Ocorrências', '/ocorrencias'),
       (Icons.receipt_outlined, 'Despesas', '/despesas'),
       (Icons.folder_outlined, 'Documentos', '/documentos'),
@@ -159,4 +189,58 @@ class ComingSoonScreen extends StatelessWidget {
         appBar: AppBar(title: Text(title)),
         body: const EmptyState('Este ecrã chega na próxima fase da app.', icon: Icons.construction_outlined),
       );
+}
+
+
+/// "N por enviar": pedidos guardados sem rede. Toca para ver, tentar de novo ou descartar.
+class _OutboxBanner extends ConsumerWidget {
+  const _OutboxBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entries = ref.watch(outboxProvider);
+    if (entries.isEmpty) return const SizedBox.shrink();
+    final failed = entries.where((entry) => entry.error != null).length;
+    return SafeArea(
+      bottom: false,
+      child: Material(
+        color: failed > 0 ? Brand.danger.withValues(alpha: 0.12) : Brand.warn.withValues(alpha: 0.15),
+        child: ListTile(
+          key: const Key('outbox_banner'),
+          dense: true,
+          leading: Icon(failed > 0 ? Icons.error_outline : Icons.cloud_upload_outlined),
+          title: Text(failed > 0 ? '$failed registo(s) recusado(s) pelo servidor' : '${entries.length} registo(s) por enviar'),
+          subtitle: const Text('Toque para ver'),
+          onTap: () => showModalBottomSheet<void>(
+            context: context,
+            showDragHandle: true,
+            builder: (context) => Consumer(builder: (context, ref, _) {
+              final items = ref.watch(outboxProvider);
+              return SafeArea(
+                child: ListView(shrinkWrap: true, children: [
+                  ListTile(
+                    title: const Text('Por enviar', style: TextStyle(fontWeight: FontWeight.w700)),
+                    trailing: TextButton(onPressed: () => ref.read(outboxProvider.notifier).flush(), child: const Text('Enviar agora')),
+                  ),
+                  for (final entry in items)
+                    ListTile(
+                      leading: Icon(entry.error == null ? Icons.schedule : Icons.error_outline, color: entry.error == null ? null : Brand.danger),
+                      title: Text(entry.label),
+                      subtitle: Text(entry.error ?? 'Guardado ${formatDateTime(entry.createdAt)}'),
+                      trailing: entry.error == null
+                          ? null
+                          : Row(mainAxisSize: MainAxisSize.min, children: [
+                              IconButton(tooltip: 'Tentar de novo', onPressed: () => ref.read(outboxProvider.notifier).retry(entry), icon: const Icon(Icons.refresh)),
+                              IconButton(tooltip: 'Descartar', onPressed: () => ref.read(outboxProvider.notifier).discard(entry), icon: const Icon(Icons.delete_outline)),
+                            ]),
+                    ),
+                  if (items.isEmpty) const ListTile(title: Text('Tudo enviado.')),
+                ]),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+  }
 }

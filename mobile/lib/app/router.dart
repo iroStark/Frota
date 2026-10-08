@@ -16,6 +16,8 @@ import '../features/operations/documents_screen.dart';
 import '../features/operations/expenses_screen.dart';
 import '../features/operations/incident_form_screen.dart';
 import '../features/operations/incidents_screen.dart';
+import '../features/reports/reports_screen.dart';
+import '../features/shared/notifications_screen.dart';
 import '../features/payments/group_payment_screen.dart';
 import '../features/payments/receive_payment_screen.dart';
 import '../features/payments/review_screen.dart';
@@ -58,7 +60,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           final home = session.user!.isStaff ? '/inicio' : '/m/inicio';
           if (path == '/' || publicPaths.contains(path) || path == '/desbloquear') return home;
           final inDriverArea = path.startsWith('/m/');
-          final inStaffArea = ['/inicio', '/cobrancas', '/frota', '/mais', '/alertas', '/pagamentos', '/validar', '/motoristas', '/viaturas', '/atribuir', '/devolver', '/ocorrencias', '/despesas', '/documentos', '/contrato', '/utilizadores'].any(path.startsWith);
+          final inStaffArea = ['/inicio', '/cobrancas', '/frota', '/mais', '/alertas', '/pagamentos', '/validar', '/motoristas', '/viaturas', '/atribuir', '/devolver', '/ocorrencias', '/despesas', '/documentos', '/contrato', '/utilizadores', '/relatorios'].any(path.startsWith);
           if (session.user!.isStaff && inDriverArea) return home;
           if (!session.user!.isStaff && inStaffArea) return home;
           return null;
@@ -96,6 +98,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => DocumentFormScreen(ownerType: state.uri.queryParameters['dono'], ownerId: state.uri.queryParameters['id']),
       ),
       GoRoute(path: '/contrato', builder: (_, _) => const ContractScreen()),
+      GoRoute(path: '/relatorios', builder: (_, _) => const ReportsScreen()),
+      GoRoute(path: '/avisos', builder: (_, _) => const NotificationsScreen()),
       GoRoute(
         path: '/utilizadores',
         redirect: (_, _) => ref.read(sessionProvider).user?.role == Role.admin ? null : '/mais',

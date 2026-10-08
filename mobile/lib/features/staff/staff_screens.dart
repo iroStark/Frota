@@ -8,6 +8,7 @@ import '../../core/format/format.dart';
 import '../../core/widgets/widgets.dart';
 import '../shared/models.dart';
 import '../shared/providers.dart';
+import '../shared/notifications_screen.dart';
 import '../shared/statement_view.dart';
 
 Tone _severityTone(String severity) => switch (severity) {
@@ -26,7 +27,8 @@ class StaffHomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('${greeting()}, ${user?.firstName ?? ''}'),
         actions: [
-          IconButton(tooltip: 'Alertas', onPressed: () => context.push('/alertas'), icon: const Icon(Icons.notifications_outlined)),
+          IconButton(tooltip: 'Alertas', onPressed: () => context.push('/alertas'), icon: const Icon(Icons.warning_amber_rounded)),
+          const NotificationsBell(),
         ],
       ),
       body: CachedBody<Dashboard>(

@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../../core/auth/session.dart';
+import '../../core/offline/outbox.dart';
 import '../../core/format/format.dart';
 import '../../core/widgets/widgets.dart';
 import '../shared/models.dart';
 import '../shared/providers.dart';
 import '../payments/review_screen.dart' show incidentTypeLabels;
+import '../shared/notifications_screen.dart';
 import '../shared/statement_view.dart';
 
 const _documentLabels = {
@@ -37,7 +39,7 @@ class DriverHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(sessionProvider).user;
     return Scaffold(
-      appBar: AppBar(title: Text('${greeting()}, ${user?.firstName ?? ''}')),
+      appBar: AppBar(title: Text('${greeting()}, ${user?.firstName ?? ''}'), actions: const [NotificationsBell()]),
       body: CachedBody<DriverHome>(
         provider: driverHomeProvider,
         builder: (context, home) {
@@ -146,7 +148,10 @@ class DriverPaymentsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Scaffold(
         appBar: AppBar(title: const Text('Pagamentos')),
-        body: CachedBody<Statement>(provider: myStatementProvider, builder: statementWidgets),
+        body: CachedBody<Statement>(
+          provider: myStatementProvider,
+          builder: (context, statement) => statementWidgets(context, statement, driverName: ref.watch(sessionProvider).user?.name),
+        ),
       );
 }
 
@@ -249,7 +254,9 @@ class _SettingsSectionState extends ConsumerState<SettingsSection> {
               context: context,
               builder: (context) => AlertDialog(
                 title: const Text('Sair da conta?'),
-                content: const Text('Os dados guardados neste telemóvel são apagados.'),
+                content: Text(ref.read(outboxProvider).isEmpty
+                    ? 'Os dados guardados neste telemóvel são apagados.'
+                    : 'Há ${ref.read(outboxProvider).length} registo(s) por enviar (sem rede). Se sair, perdem-se.'),
                 actions: [
                   TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
                   FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Sair')),

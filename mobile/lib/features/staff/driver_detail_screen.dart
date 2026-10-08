@@ -134,7 +134,7 @@ class DriverDetailScreen extends ConsumerWidget {
                 ]),
               ),
             const SizedBox(height: 12),
-            ...statementWidgets(context, statement),
+            ...statementWidgets(context, statement, driverName: driver?['name'] as String?),
           ];
         },
       ),

@@ -4,6 +4,7 @@ import 'package:local_auth/local_auth.dart';
 import '../api/api_client.dart';
 import '../api/api_error.dart';
 import '../cache/json_cache.dart';
+import '../offline/outbox.dart';
 import 'token_store.dart';
 
 enum Role { admin, gestor, motorista }
@@ -141,6 +142,7 @@ class SessionController extends Notifier<SessionState> {
   void expire() => _signOutLocally();
 
   Future<void> _signOutLocally() async {
+    await ref.read(outboxProvider.notifier).clearAll();
     await _tokens.clear();
     await ref.read(cacheProvider).clear();
     state = const SessionState(SessionStatus.signedOut);

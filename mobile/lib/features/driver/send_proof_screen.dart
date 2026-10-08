@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_error.dart';
-import '../../core/auth/session.dart';
+import '../../core/offline/outbox.dart';
 import '../../core/format/format.dart';
 import '../../core/widgets/photo_field.dart';
 import '../../core/widgets/widgets.dart';
@@ -46,20 +46,24 @@ class _SendProofScreenState extends ConsumerState<SendProofScreen> {
       return;
     }
     setState(() => _busy = true);
-    final api = ref.read(apiProvider);
     try {
-      final fileId = await api.uploadFile(_photo!.path, category: 'comprovativo-motorista');
-      await api.post<Map<String, dynamic>>('/me/payment-declarations', {
-        'amount': parseKz(_amount.text),
-        'paidAt': _paidAt.toUtc().toIso8601String(),
-        'method': _method,
-        'reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(),
-        'proofFileId': fileId,
-        'clientId': _clientId,
-      });
+      final result = await ref.read(outboxProvider.notifier).submit(
+        path: '/me/payment-declarations',
+        label: 'Comprovativo de ${formatKz(parseKz(_amount.text))}',
+        body: {
+          'amount': parseKz(_amount.text),
+          'paidAt': _paidAt.toUtc().toIso8601String(),
+          'method': _method,
+          'reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(),
+          'clientId': _clientId,
+        },
+        files: [OutboxFile(field: 'proofFileId', path: _photo!.path, category: 'comprovativo-motorista')],
+      );
       ref.invalidate(driverHomeProvider);
       if (!mounted) return;
-      showMessage(context, 'Comprovativo enviado. Vai receber a confirmação da gestão.');
+      showMessage(context, result == SubmitResult.queued
+          ? 'Sem rede: comprovativo guardado e enviado quando houver ligação.'
+          : 'Comprovativo enviado. Vai receber a confirmação da gestão.');
       context.pop();
     } on ApiException catch (error) {
       if (mounted) showMessage(context, error.message);

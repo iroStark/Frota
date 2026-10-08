@@ -6,7 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../app/theme.dart';
 import '../../core/api/api_error.dart';
-import '../../core/auth/session.dart';
+import '../../core/offline/outbox.dart';
 import '../../core/format/format.dart';
 import '../../core/widgets/photo_field.dart';
 import '../../core/widgets/widgets.dart';
@@ -53,22 +53,23 @@ class _ReceivePaymentScreenState extends ConsumerState<ReceivePaymentScreen> {
   Future<void> _submit() async {
     if (_driverId == null || !_form.currentState!.validate()) return;
     setState(() => _busy = true);
-    final api = ref.read(apiProvider);
     try {
-      final proofFileId = _photo == null ? null : await api.uploadFile(_photo!.path, category: 'entrega-comprovativo');
-      final result = await api.post<Map<String, dynamic>>('/payments', {
-        'driverId': _driverId,
-        'amount': parseKz(_amount.text),
-        'receivedAt': _receivedAt.toUtc().toIso8601String(),
-        'method': _method,
-        'reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(),
-        'proofFileId': proofFileId,
-        'clientId': _clientId,
-      });
+      final result = await ref.read(outboxProvider.notifier).submit(
+        path: '/payments',
+        label: 'Pagamento de ${formatKz(parseKz(_amount.text))}',
+        body: {
+          'driverId': _driverId,
+          'amount': parseKz(_amount.text),
+          'receivedAt': _receivedAt.toUtc().toIso8601String(),
+          'method': _method,
+          'reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(),
+          'clientId': _clientId,
+        },
+        files: [if (_photo != null) OutboxFile(field: 'proofFileId', path: _photo!.path, category: 'entrega-comprovativo')],
+      );
       invalidateMoney(ref, driverId: _driverId);
       if (!mounted) return;
-      final credit = asInt(result['credit']);
-      showMessage(context, credit > 0 ? 'Pagamento registado. Ficou ${formatKz(credit)} de crédito.' : 'Pagamento registado.');
+      showMessage(context, result == SubmitResult.queued ? 'Sem rede: pagamento guardado e enviado quando houver ligação.' : 'Pagamento registado.');
       context.pop();
     } on ApiException catch (error) {
       if (mounted) showMessage(context, error.message);

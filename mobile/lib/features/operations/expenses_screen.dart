@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_error.dart';
-import '../../core/auth/session.dart';
+import '../../core/offline/outbox.dart';
 import '../../core/format/format.dart';
 import '../../core/widgets/photo_field.dart';
 import '../../core/widgets/widgets.dart';
@@ -132,29 +132,31 @@ class _ExpenseFormScreenState extends ConsumerState<ExpenseFormScreen> {
       return;
     }
     setState(() => _busy = true);
-    final api = ref.read(apiProvider);
     try {
-      final receiptId = _receipt == null ? null : await api.uploadFile(_receipt!.path, category: 'despesa-recibo');
-      await api.post<Map<String, dynamic>>('/expenses', {
-        'mode': _mode,
-        'vehicleIds': _vehicles.toList(),
-        'amount': amount,
-        'category': _category,
-        'responsible': _responsible,
-        'spentOn': isoDay(_spentOn),
-        'supplier': _supplier.text.trim().isEmpty ? null : _supplier.text.trim(),
-        'receiptFileId': receiptId,
-        'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-        'clientId': _clientId,
-      });
+      final total = _amounts.fold<int>(0, (sum, value) => sum + value);
+      final result = await ref.read(outboxProvider.notifier).submit(
+        path: '/expenses',
+        label: 'Despesa de ${formatKz(total)}',
+        body: {
+          'mode': _mode,
+          'vehicleIds': _vehicles.toList(),
+          'amount': amount,
+          'category': _category,
+          'responsible': _responsible,
+          'spentOn': isoDay(_spentOn),
+          'supplier': _supplier.text.trim().isEmpty ? null : _supplier.text.trim(),
+          'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+          'clientId': _clientId,
+        },
+        files: [if (_receipt != null) OutboxFile(field: 'receiptFileId', path: _receipt!.path, category: 'despesa-recibo')],
+      );
       ref.invalidate(expensesProvider);
       ref.invalidate(dashboardProvider);
       for (final id in _vehicles) {
         ref.invalidate(vehicleDetailProvider(id));
       }
       if (!mounted) return;
-      final total = _amounts.fold<int>(0, (sum, value) => sum + value);
-      showMessage(context, 'Despesa registada: ${formatKz(total)}.');
+      showMessage(context, result == SubmitResult.queued ? 'Sem rede: despesa guardada e enviada quando houver ligação.' : 'Despesa registada: ${formatKz(total)}.');
       context.pop();
     } on ApiException catch (error) {
       if (mounted) showMessage(context, error.message);

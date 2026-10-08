@@ -15,7 +15,7 @@ export type Notice = {
   dedupeKey?: string;
 };
 
-const kz = (value: unknown) => `${new Intl.NumberFormat("pt-PT", { useGrouping: "always" }).format(Number(value)).replace(/\s/g, " ")} Kz`;
+export const kz = (value: unknown) => `${new Intl.NumberFormat("pt-PT", { useGrouping: "always" }).format(Number(value)).replace(/\s/g, " ")} Kz`;
 const MONTHS = ["jan.", "fev.", "mar.", "abr.", "mai.", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."];
 const day = (iso: string) => {
   const [, month, dayOfMonth] = iso.slice(0, 10).split("-").map(Number);

@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   dio: ^5.11.1
+  fl_chart: ^1.2.0
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -20,6 +21,8 @@ dependencies:
   intl: ^0.20.2
   local_auth: ^3.0.2
   path_provider: ^2.1.6
+  pdf: ^3.13.1
+  printing: ^5.15.1
   share_plus: ^13.3.1
   url_launcher: ^6.3.3
   uuid: ^4.6.0
