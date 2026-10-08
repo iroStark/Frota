@@ -113,6 +113,10 @@ uploads/         # local apenas; em produção usa Volume
 railway.toml     # config Railway
 ```
 
+## App móvel (Flutter)
+
+Em [`mobile/`](mobile/README.md). Para dados de teste: `npm run seed:demo` (só bases locais).
+
 ## Desenvolvimento do backend v1 (Fase 2)
 
 - Requer Node ≥ 22.18 (executa `.ts` diretamente, sem compilação).

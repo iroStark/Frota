@@ -17,7 +17,8 @@
     "import:legacy": "node backend/import/import-legacy.ts",
     "typecheck": "tsc",
     "user:create": "node backend/cli/create-user.ts",
-    "test:integration": "node --test \"backend/**/*.it.ts\""
+    "test:integration": "node --test \"backend/**/*.it.ts\"",
+    "seed:demo": "node backend/cli/seed-demo.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

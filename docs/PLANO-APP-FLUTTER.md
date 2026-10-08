@@ -443,14 +443,17 @@ A fazer (antes do corte):
 - [ ] Relatórios por período/motorista/viatura e exportação PDF/CSV — Fase 6.
 - **Aceitação:** migração de uma cópia de produção reproduz os totais históricos (com discrepâncias explicadas); cobertura ≥80% no motor de cobranças.
 
-### Fase 3 — Fundações Flutter (1 semana)
-- [ ] `flutter create mobile` (org `ao.uhocha`), flavors dev/prod, ícones e splash.
-- [ ] Tema, design system, l10n `pt_AO`, formatação Kz/datas.
-- [ ] Cliente API gerado, Dio com refresh, gestão de sessão, login + PIN/biometria.
-- [ ] go_router com shell + bottom nav + ação rápida.
-- [ ] Drift + camada de repositório (cache-then-network).
-- [ ] CI (GitHub Actions): `flutter analyze`, testes, build APK.
-- **Aceitação:** login real contra o backend de staging; navegação entre os 5 separadores com ecrãs vazios.
+### Fase 3 — Fundações Flutter ✅ (ramo `fase-3-flutter`)
+- [x] `mobile/` (org `ao.uhocha`), Android + iOS (mínimo iOS 15), nome "UHOCHA Frota", logótipo.
+- [x] Tema Material 3 com as cores UHOCHA (claro/escuro), `pt_PT`, kwanzas e datas na hora de Luanda.
+- [x] Cliente da API com renovação automática e única do token; erros traduzidos com campos.
+- [x] Sessão: entrar (equipa com palavra-passe, motorista com PIN), ativação do motorista por código, bloqueio biométrico opcional, restauro da sessão e modo sem ligação.
+- [x] Navegação por perfil com botão central de ação rápida; redirecionamento por estado da sessão.
+- [x] Cache "rede primeiro, cópia guardada sem ligação" com aviso visível.
+- [x] Ecrãs já ligados à API: Início da equipa (semana a cobrar, dívida, líquido do mês, viaturas, alertas), Cobranças da semana, Frota (viaturas e motoristas com pesquisa), Alertas, Mais; Início do motorista (saldo, próxima entrega estimada, viatura, documentos, comprovativos), Pagamentos (detalhe por dias), Perfil.
+- [x] 9 testes unitários/widgets + teste de integração no simulador iOS contra o backend (`npm run seed:demo`).
+- Decisões: modelos escritos à mão (sem freezed/codegen) e cache em ficheiros JSON; a base local `drift` fica para a fila offline da Fase 6.
+- Pendente do lado do ambiente: Android *cmdline-tools* + licenças; CI (GitHub Actions) para `flutter analyze/test`.
 
 ### Fase 4 — Núcleo operacional (2,5 semanas)
 - [ ] Início (dashboard) e Alertas.

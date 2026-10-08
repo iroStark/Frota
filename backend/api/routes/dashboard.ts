@@ -1,5 +1,6 @@
 // Painel do gestor, alertas e ecrã inicial do motorista — tudo calculado no servidor.
 import type { Router } from "express";
+import type pg from "pg";
 import { pool } from "../../db.js";
 import { calculateWeeklyCharge, weeklyDueAt } from "../../domain/charges.ts";
 import { addDays, localDateOf, weekStartOf } from "../../domain/time.ts";
@@ -9,8 +10,36 @@ import { type Db, driverOnly, staff, withClient } from "../context.ts";
 import { DOCUMENT_SELECT } from "./fleet.ts";
 
 const LUANDA_OFFSET = 60;
+const DOCUMENT_LABELS: Record<string, string> = {
+  bilhete_identidade: "Bilhete de Identidade", carta_conducao: "Carta de condução", livrete: "Livrete",
+  titulo_propriedade: "Título de propriedade", seguro: "Seguro", inspecao: "Inspeção",
+  imposto_circulacao: "Imposto de circulação", licenca_taxi: "Licença de táxi", contrato: "Contrato", outro: "Documento",
+};
 const PAID = `coalesce((SELECT sum(a.amount) FROM payment_allocations a JOIN payments p ON p.id = a.payment_id
                         WHERE a.charge_id = c.id AND p.voided_at IS NULL), 0)`;
+
+/**
+ * Executa consultas uma a uma: um cliente pg só corre uma consulta de cada vez
+ * (Promise.all sobre o mesmo cliente está obsoleto no pg 9).
+ */
+async function sequential(queries: (() => Promise<pg.QueryResult>)[]): Promise<pg.QueryResult[]> {
+  const results: pg.QueryResult[] = [];
+  for (const query of queries) results.push(await query());
+  return results;
+}
+
+const kzFormat = new Intl.NumberFormat("pt-PT", { maximumFractionDigits: 0, useGrouping: "always" });
+const MONTHS = ["jan.", "fev.", "mar.", "abr.", "mai.", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."];
+/** Textos dos alertas prontos a mostrar: "86 667 Kz", "14 set.", "16 dias". */
+const kz = (value: unknown) => `${kzFormat.format(Number(value)).replace(/\s/g, "\u00A0")}\u00A0Kz`;
+const day = (value: unknown) => {
+  const [, month, dayOfMonth] = String(value ?? "").slice(0, 10).split("-").map(Number);
+  return month ? `${dayOfMonth} ${MONTHS[month - 1]}` : "";
+};
+const delay = (hours: unknown) => {
+  const total = Number(hours);
+  return total >= 48 ? `${Math.floor(total / 24)} dias` : `${total} h`;
+};
 
 type Alert = { severity: "danger" | "warn" | "info"; kind: string; title: string; detail: string; target?: { type: string; id: string } };
 
@@ -19,19 +48,19 @@ async function staffDashboard(db: Db, now: Date) {
   const billingWeek = addDays(weekStartOf(today), -7);
   const month = today.slice(0, 7);
 
-  const [week, debt, breaches, review, documents, vehicles, monthTotals] = await Promise.all([
-    db.query(
+  const [week, debt, breaches, review, documents, vehicles, monthTotals] = await sequential([
+    () => db.query(
       `SELECT c.id, c.driver_id, d.name AS driver_name, c.amount, c.status, c.due_at, ${PAID} AS paid
        FROM charges c JOIN drivers d ON d.id = c.driver_id
        WHERE c.kind = 'semanal' AND c.period_start = $1 AND c.status <> 'anulada' ORDER BY d.name`,
       [billingWeek],
     ),
-    db.query(
+    () => db.query(
       `SELECT coalesce(sum(c.amount - ${PAID}), 0) AS total, count(DISTINCT c.driver_id) AS drivers
        FROM charges c WHERE c.status IN ('aberta', 'parcial') AND c.due_at < $1`,
       [now],
     ),
-    db.query(
+    () => db.query(
       `SELECT c.id, c.driver_id, d.name AS driver_name, c.period_start, c.amount - ${PAID} AS outstanding,
               floor(extract(epoch FROM ($1 - c.due_at)) / 3600) AS delay_hours
        FROM charges c JOIN drivers d ON d.id = c.driver_id
@@ -39,19 +68,19 @@ async function staffDashboard(db: Db, now: Date) {
        ORDER BY c.due_at`,
       [now],
     ),
-    db.query(
+    () => db.query(
       `SELECT (SELECT count(*) FROM payment_declarations WHERE status = 'pendente') AS declarations,
               (SELECT count(*) FROM incidents WHERE status = 'por_validar') AS incidents`,
     ),
-    db.query(
+    () => db.query(
       `SELECT x.*, coalesce(v.plate, dr.name) AS owner_name FROM (${DOCUMENT_SELECT}) x
        LEFT JOIN vehicles v ON x.owner_type = 'vehicle' AND v.id = x.owner_id
        LEFT JOIN drivers dr ON x.owner_type = 'driver' AND dr.id = x.owner_id
        WHERE x.deleted_at IS NULL AND x.validity IN ('expirado', 'a_expirar')
        ORDER BY x.valid_until`,
     ),
-    db.query("SELECT status, count(*)::int AS n FROM vehicles WHERE deleted_at IS NULL GROUP BY status"),
-    db.query(
+    () => db.query("SELECT status, count(*)::int AS n FROM vehicles WHERE deleted_at IS NULL GROUP BY status"),
+    () => db.query(
       `SELECT
          (SELECT coalesce(sum(amount), 0) FROM payments WHERE voided_at IS NULL
             AND to_char(received_at AT TIME ZONE 'Africa/Luanda', 'YYYY-MM') = $1) AS received,
@@ -72,19 +101,19 @@ async function staffDashboard(db: Db, now: Date) {
     ...breaches.rows.map((row): Alert => ({
       severity: "danger", kind: "atraso_72h",
       title: `${row.driver_name}: atraso superior a 72h`,
-      detail: `Semana de ${row.period_start}, ${row.outstanding} Kz em falta há ${row.delay_hours}h. O contrato prevê possível resolução.`,
+      detail: `Semana de ${day(row.period_start)}: faltam ${kz(row.outstanding)} há ${delay(row.delay_hours)}. O contrato prevê possível resolução.`,
       target: { type: "driver", id: row.driver_id },
     })),
     ...weekRows.filter((row) => row.outstanding > 0 && row.status !== "isenta").map((row): Alert => ({
       severity: new Date(row.due_at).getTime() < now.getTime() ? "danger" : "warn", kind: "entrega_pendente",
       title: `Entrega pendente: ${row.driver_name}`,
-      detail: `${row.outstanding} Kz da semana de ${billingWeek}.`,
+      detail: `Faltam ${kz(row.outstanding)} da semana de ${day(billingWeek)}.`,
       target: { type: "driver", id: row.driver_id },
     })),
     ...documents.rows.map((row): Alert => ({
       severity: row.validity === "expirado" ? "danger" : "warn", kind: "documento",
-      title: `${row.type.replaceAll("_", " ")}: ${row.owner_name ?? "empresa"}`,
-      detail: row.validity === "expirado" ? `Expirou a ${row.valid_until}.` : `Expira a ${row.valid_until}.`,
+      title: `${DOCUMENT_LABELS[row.type] ?? row.type}: ${row.owner_name ?? "empresa"}`,
+      detail: row.validity === "expirado" ? `Expirou a ${day(row.valid_until)}.` : `Expira a ${day(row.valid_until)}.`,
       target: row.owner_id ? { type: row.owner_type, id: row.owner_id } : undefined,
     })),
     ...(Number(review.rows[0].declarations) ? [{
@@ -122,22 +151,22 @@ async function staffDashboard(db: Db, now: Date) {
 async function driverHome(db: Db, driverId: string, now: Date) {
   const today = localDateOf(now.getTime(), LUANDA_OFFSET);
   const currentWeek = weekStartOf(today);
-  const [totals, assignment, documents, declarations, incidents] = await Promise.all([
-    db.query(
+  const [totals, assignment, documents, declarations, incidents] = await sequential([
+    () => db.query(
       `SELECT coalesce(sum(c.amount), 0) AS charged,
               coalesce(sum(c.amount - ${PAID}) FILTER (WHERE c.status IN ('aberta', 'parcial') AND c.due_at < $2), 0) AS overdue,
               (SELECT coalesce(sum(amount), 0) FROM payments WHERE driver_id = $1 AND voided_at IS NULL) AS paid
        FROM charges c WHERE c.driver_id = $1 AND c.status <> 'anulada'`,
       [driverId, now],
     ),
-    db.query(
+    () => db.query(
       `SELECT a.id, a.start_at, a.end_at, a.weekly_fee, a.vehicle_id, v.brand, v.model, v.plate, v.status AS vehicle_status
        FROM assignments a JOIN vehicles v ON v.id = a.vehicle_id WHERE a.driver_id = $1 AND a.status = 'ativa'`,
       [driverId],
     ),
-    db.query(`${DOCUMENT_SELECT} WHERE d.owner_type = 'driver' AND d.owner_id = $1 AND d.deleted_at IS NULL ORDER BY d.valid_until NULLS LAST`, [driverId]),
-    db.query("SELECT id, amount, paid_at, status, rejection_reason, submitted_at FROM payment_declarations WHERE driver_id = $1 ORDER BY submitted_at DESC LIMIT 5", [driverId]),
-    db.query("SELECT id, type, status, start_at, end_at FROM incidents WHERE driver_id = $1 AND status IN ('por_validar', 'agendada', 'em_curso') ORDER BY start_at DESC", [driverId]),
+    () => db.query(`${DOCUMENT_SELECT} WHERE d.owner_type = 'driver' AND d.owner_id = $1 AND d.deleted_at IS NULL ORDER BY d.valid_until NULLS LAST`, [driverId]),
+    () => db.query("SELECT id, amount, paid_at, status, rejection_reason, submitted_at FROM payment_declarations WHERE driver_id = $1 ORDER BY submitted_at DESC LIMIT 5", [driverId]),
+    () => db.query("SELECT id, type, status, start_at, end_at FROM incidents WHERE driver_id = $1 AND status IN ('por_validar', 'agendada', 'em_curso') ORDER BY start_at DESC", [driverId]),
   ]);
 
   // Estimativa da semana em curso (vence na segunda seguinte), com as paragens já validadas.
